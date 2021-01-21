@@ -235,6 +235,7 @@ while ($result -ne "Cancel")
             $VntY = $screenHeight / 2
             $YesButton.Text = "Close"
             Start-Process -FilePath "komenasne.exe" -WorkingDirectory ".\"
+#            Start-Process -FilePath "komenasne.exe" -WorkingDirectory "..\komenasne\"
             sleep -Milliseconds  5000
             # PC TV Plusを倍速再生にする（不要な人はコメントアウトする）
             . Send-Keys '+(^(G))' Vnt
@@ -273,6 +274,7 @@ while ($result -ne "Cancel")
     {
         # スクリーンショット
         . Send-Keys "" commenomi
+        sleep -Milliseconds 100
         $bounds = [Drawing.Rectangle]::FromLTRB(0, 0, $screenWidth, $screenHeight)
         $file_name = (Get-Date).ToString("yyyyMMddHHmmss") + "screenshot.png"
         screenshot $bounds $file_name
