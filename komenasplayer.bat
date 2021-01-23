@@ -1,1 +1,1 @@
-powershell .\komenasplayer.ps1
+powershell -ExecutionPolicy Unrestricted .\komenasplayer.ps1
