@@ -8,10 +8,11 @@ $comment_viewer_size_max = $True
 $default_window_pos_top = 800
 $default_window_pos_left = 20
 
-
 #30秒バックのオプション ( $True or $False ) スクリーンショット機能と排他
 $enable_back_button = $True 
 
+#PC TV Plusを早見再生する ( $True or $False )
+$enable_speed_up = $True
 
 # Thanks
 # http://kamifuji.dyndns.org/PS-Support/
@@ -284,8 +285,10 @@ while ($result -ne "Cancel") {
                 $obj = Start-Process -FilePath "komenasne.exe" -WorkingDirectory "..\komenasne\" -PassThru
                 Wait-Process -InputObject $obj
                 sleep -Milliseconds  4000
-                # PC TV Plusを倍速再生にする（不要な人はコメントアウトする）
-                . Send-Keys '+(^(G))' Vnt
+                # PC TV Plusを倍速再生にする
+                if ( $enable_speed_up -eq $True ) {
+                    . Send-Keys '+(^(G))' Vnt
+                }
                 [System.Windows.Forms.Cursor]::Position = New-Object System.Drawing.Point( $VntX, $VntY )
                 $count = 0
                 while ($count -lt 50) {
