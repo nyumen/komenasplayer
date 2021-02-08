@@ -188,7 +188,7 @@ $screenHeight = [System.Windows.Forms.Screen]::PrimaryScreen.WorkingArea.Height
 $form = New-Object System.Windows.Forms.Form 
 $form.Text = "こめなす"
 #$form.Size = New-Object System.Drawing.Size(220,130)
-$form.Size = New-Object System.Drawing.Size(220,175)
+$form.Size = New-Object System.Drawing.Size(230,190)
 $form.Top = $default_window_pos_top
 $form.Left = $default_window_pos_left
 $form.StartPosition = "Manual"
@@ -198,35 +198,42 @@ $form.MinimizeBox = $false
 $form.FormBorderStyle = "FixedSingle"
 $form.Opacity = 1
 
-# OKボタンの設定
-$OKButton = New-Object System.Windows.Forms.Button
-$OKButton.Location = New-Object System.Drawing.Point(15,15)
-$OKButton.Size = New-Object System.Drawing.Size(55,30)
-$OKButton.Text = "SKIP A"
-$OKButton.DialogResult = "OK"
-$OKButton.Flatstyle = "Popup"
-$OKButton.Backcolor = "black"
-$OKButton.forecolor = "yellow"
+# ラベル SKIP A
+$LabelSkipA = New-Object System.Windows.Forms.Label
+$LabelSkipA.Location = "15,15"
+$LabelSkipA.Size = New-Object System.Drawing.Size(55,30)
+$LabelSkipA.Text = "SKIP A"
+$LabelSkipA.BackColor = "black"
+$LabelSkipA.Forecolor = "yellow"
+$LabelSkipA.TextAlign = "MiddleCenter"
 
-# OKボタンの設定
-$OK2Button = New-Object System.Windows.Forms.Button
-$OK2Button.Location = New-Object System.Drawing.Point(80,15)
-$OK2Button.Size = New-Object System.Drawing.Size(55,30)
-$OK2Button.Text = "SKIP B"
-$OK2Button.DialogResult = "Ignore"
-$OK2Button.Flatstyle = "Popup"
-$OK2Button.Backcolor = "black"
-$OK2Button.forecolor = "yellow"
+# ラベル SKIP B
+$LabelSkipB = New-Object System.Windows.Forms.Label
+$LabelSkipB.Location = "80,15"
+$LabelSkipB.Size = New-Object System.Drawing.Size(55,30)
+$LabelSkipB.Text = "SKIP B"
+$LabelSkipB.BackColor = "black"
+$LabelSkipB.Forecolor = "yellow"
+$LabelSkipB.TextAlign = "MiddleCenter"
 
-# Abortボタンの設定
-$AbortButton = New-Object System.Windows.Forms.Button
-$AbortButton.Location = New-Object System.Drawing.Point(145,15)
-$AbortButton.Size = New-Object System.Drawing.Size(55,30)
-$AbortButton.Text = "+30"
-$AbortButton.DialogResult = "Abort"
-$AbortButton.Flatstyle = "Popup"
-$AbortButton.backcolor = "black"
-$AbortButton.forecolor = "yellow"
+# ラベル 30秒スキップ
+$LabelSkipPrev = New-Object System.Windows.Forms.Label
+$LabelSkipPrev.Location = "145,15"
+$LabelSkipPrev.Size = New-Object System.Drawing.Size(55,30)
+$LabelSkipPrev.Text = "+30"
+$LabelSkipPrev.BackColor = "black"
+$LabelSkipPrev.Forecolor = "yellow"
+$LabelSkipPrev.TextAlign = "MiddleCenter"
+
+# ラベル 30秒バック
+$LabelSkipBack = New-Object System.Windows.Forms.Label
+$LabelSkipBack.Location = "145,60"
+$LabelSkipBack.Size = New-Object System.Drawing.Size(55,30)
+$LabelSkipBack.Text = "-30"
+$LabelSkipBack.BackColor = "black"
+$LabelSkipBack.Forecolor = "yellow"
+$LabelSkipBack.TextAlign = "MiddleCenter"
+
 
 # Yesボタンの設定
 $YesButton = New-Object System.Windows.Forms.Button
@@ -238,28 +245,8 @@ $YesButton.Flatstyle = "Popup"
 $YesButton.backcolor = "black"
 $YesButton.forecolor = "yellow"
 
-# キャンセルボタンの設定
-$CancelButton = New-Object System.Windows.Forms.Button
-$CancelButton.Location = New-Object System.Drawing.Point(80,60)
-$CancelButton.Size = New-Object System.Drawing.Size(55,30)
-$CancelButton.Text = "PAUSE"
-$CancelButton.DialogResult = "Retry"
-$CancelButton.Flatstyle = "Popup"
-$CancelButton.backcolor = "black"
-$CancelButton.forecolor = "yellow"
 
-# Noneボタンの設定
-$NoneButton = New-Object System.Windows.Forms.Button
-$NoneButton.Location = New-Object System.Drawing.Point(145,60)
-$NoneButton.Size = New-Object System.Drawing.Size(55,30)
-$NoneButton.Text = "-30"
-$NoneButton.DialogResult = "No"
-$NoneButton.Flatstyle = "Popup"
-$NoneButton.backcolor = "black"
-$NoneButton.forecolor = "yellow"
-
-
-# ラベル
+# ラベル ログセット
 $LabelLog = New-Object System.Windows.Forms.Label
 $LabelLog.Location = "15,105"
 $LabelLog.Size = New-Object System.Drawing.Size(55,30)
@@ -269,7 +256,7 @@ $LabelLog.Forecolor = "yellow"
 $LabelLog.TextAlign = "MiddleCenter"
 
 
-# ラベル
+# ラベル PC TV Plus 再起動
 $LabelRecovery = New-Object System.Windows.Forms.Label
 $LabelRecovery.Location = "80,105"
 $LabelRecovery.Size = New-Object System.Drawing.Size(55,30)
@@ -278,18 +265,32 @@ $LabelRecovery.BackColor = "black"
 $LabelRecovery.Forecolor = "yellow"
 $LabelRecovery.TextAlign = "MiddleCenter"
 
+
+# キャンセルボタンの設定
+$CancelButton = New-Object System.Windows.Forms.Button
+$CancelButton.Location = New-Object System.Drawing.Point(145,105)
+$CancelButton.Size = New-Object System.Drawing.Size(55,30)
+$CancelButton.Text = "SS"
+$CancelButton.DialogResult = "Retry"
+$CancelButton.Flatstyle = "Popup"
+$CancelButton.backcolor = "black"
+$CancelButton.forecolor = "yellow"
+
 # ラベル
-$LabelSS = New-Object System.Windows.Forms.Label
-$LabelSS.Location = "145,105"
-$LabelSS.Size = New-Object System.Drawing.Size(55,30)
-$LabelSS.Text = "SS" 
-$LabelSS.BackColor = "black"
-$LabelSS.Forecolor = "yellow"
-$LabelSS.TextAlign = "MiddleCenter"
+$LabelPause = New-Object System.Windows.Forms.Label
+$LabelPause.Location = "80,60"
+$LabelPause.Size = New-Object System.Drawing.Size(55,30)
+$LabelPause.Text = "PAUSE" 
+$LabelPause.BackColor = "black"
+$LabelPause.Forecolor = "yellow"
+$LabelPause.TextAlign = "MiddleCenter"
 
-
+$form.Controls.Add($LabelSkipA)
+$form.Controls.Add($LabelSkipB)
+$form.Controls.Add($LabelSkipPrev)
+$form.Controls.Add($LabelSkipBack)
 $form.Controls.Add($LabelRecovery)
-$form.Controls.Add($LabelSS)
+$form.Controls.Add($LabelPause)
 $form.Controls.Add($LabelLog)
 
 $file = $null
@@ -347,13 +348,60 @@ $FuncLogFileOpen = {
     }
 }
 
-$LabelRecovery.Add_Click($FuncPCTVReStart)
-#$LabelSS.Add_Click($FuncScreenShot)
-$LabelSS.Add_Click($FuncSkipBack)
-$LabelLog.Add_Click($FuncLogFileOpen)
+$FuncSkipA = {
+    # 次のチャプターとAのコメントまで移動する
+    . Send-Keys "a{LEFT}{LEFT}{LEFT}" $comment_viewer_app
+    . Send-Keys "^({RIGHT})" Vnt
+    sleep -Milliseconds 4000
+    [System.Windows.Forms.Cursor]::Position = New-Object System.Drawing.Point($VntX, $VntY)
+}
 
-#$form.Add_MouseHOver({$form.Size = New-Object System.Drawing.Size(220,175)})
-#$form.Add_MouseLeave({$form.Size = New-Object System.Drawing.Size(240,150)})
+$FuncSkipB = {
+    # 次のチャプターとBのコメントまで移動する
+    . Send-Keys "b{LEFT}{LEFT}{LEFT}" $comment_viewer_app
+    . Send-Keys "^({RIGHT})" Vnt
+    sleep -Milliseconds  4000
+    [System.Windows.Forms.Cursor]::Position = New-Object System.Drawing.Point( $VntX, $VntY )
+}
+
+$FuncSkipPrev = {
+    # 30秒飛ばし
+    . Send-Keys "%({RIGHT})" Vnt
+    . Send-Keys " 3" $comment_viewer_app
+    # commenomiが進みすぎるときはこの値を増やす
+    sleep -Milliseconds $prev_skip_wait
+    . Send-Keys " " $comment_viewer_app
+    sleep -Milliseconds 100
+    . Send-Keys "" Vnt
+    [System.Windows.Forms.Cursor]::Position = New-Object System.Drawing.Point($VntX, $VntY)
+}
+
+$FuncSkipBack = {
+    # 30秒戻し
+    . Send-Keys "%({LEFT}{LEFT})" Vnt
+    . Send-Keys " 2" $comment_viewer_app
+    # commenomiが進みすぎるときはこの値を増やす
+    sleep -Milliseconds $back_skip_wait
+    . Send-Keys " " $comment_viewer_app
+    sleep -Milliseconds 100
+    . Send-Keys "" Vnt
+    [System.Windows.Forms.Cursor]::Position = New-Object System.Drawing.Point($VntX, $VntY)
+}
+
+$FuncPause = {
+    # 一時停止
+    . Send-Keys " " $comment_viewer_app
+    . Send-Keys " " Vnt
+}
+
+$LabelSkipA.Add_Click($FuncSkipA)
+$LabelSkipB.Add_Click($FuncSkipB)
+$LabelSkipPrev.Add_Click($FuncSkipPrev)
+$LabelSkipBack.Add_Click($FuncSkipBack)
+
+$LabelRecovery.Add_Click($FuncPCTVReStart)
+$LabelPause.Add_Click($FuncPause)
+$LabelLog.Add_Click($FuncLogFileOpen)
 
 
 
@@ -378,23 +426,6 @@ $VerbosePreference = 'Continue'
 $result = $form.ShowDialog()
 
 
-$FuncPause = {
-    # 一時停止
-    . Send-Keys " " $comment_viewer_app
-    . Send-Keys " " Vnt
-}
-
-$FuncSkipBack = {
-    # 30秒戻し
-    . Send-Keys "%({LEFT}{LEFT})" Vnt
-    . Send-Keys " 2" $comment_viewer_app
-    # commenomiが進みすぎるときはこの値を増やす
-    sleep -Milliseconds $back_skip_wait
-    . Send-Keys " " $comment_viewer_app
-    sleep -Milliseconds 100
-    . Send-Keys "" Vnt
-    [System.Windows.Forms.Cursor]::Position = New-Object System.Drawing.Point($VntX, $VntY)
-}
 
 # 結果による処理分岐
 while ($result -ne "Cancel") {
@@ -420,11 +451,13 @@ while ($result -ne "Cancel") {
 
                 # PC TV Plusウィンドウ位置調整
                 if ( $ps -ne $null ) {
-                    $y, $width, $height = 174, 1280, 720
-                    $x = ( 1920 - $width ) / 2
+                    $y = 174 # PC TV Plusの縦位置
+                    $width = 1280 # PC TV Plusの幅
+                    $shift = 0 # 右にずらす
+                    $x = (( 1920 - $width ) / 2) + $shift
+                    $height = ($width / 16 * 9)
                     [Win32Api]::MoveWindow($ps.MainWindowHandle, $x, $y, $width, $height, $true) | Out-Null
                 }
-
 
                 if ( $file -ne $null ) {
                     $file_name = """" + $file + """"
@@ -476,33 +509,8 @@ while ($result -ne "Cancel") {
     }
 
     if ($result -eq "Retry") {
-        . $FuncPause
-    }
-
-    if ($result -eq "Abort") {
-        # 30秒飛ばし
-        . Send-Keys "%({RIGHT})" Vnt
-        . Send-Keys " 3" $comment_viewer_app
-        # commenomiが進みすぎるときはこの値を増やす
-        sleep -Milliseconds $prev_skip_wait
-        . Send-Keys " " $comment_viewer_app
-        sleep -Milliseconds 100
-        . Send-Keys "" Vnt
-        [System.Windows.Forms.Cursor]::Position = New-Object System.Drawing.Point($VntX, $VntY)
-    }
-
-    if ($result -eq "No") {
+        # スクリーンショット
         . $FuncScreenShot
-
-        # 30秒戻し
-#        . Send-Keys "%({LEFT}{LEFT})" Vnt
-#        . Send-Keys " 2" $comment_viewer_app
-        # commenomiが進みすぎるときはこの値を増やす
-#        sleep -Milliseconds $back_skip_wait
-#        . Send-Keys " " $comment_viewer_app
-#        sleep -Milliseconds 100
-#        . Send-Keys "" Vnt
-#        [System.Windows.Forms.Cursor]::Position = New-Object System.Drawing.Point($VntX, $VntY)
     }
 
 
