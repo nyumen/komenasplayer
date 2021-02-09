@@ -21,7 +21,10 @@ $back_skip_wait = 3000
 $form_opacity = 0.6
 
 # 過去ログフォルダ
-$log_dir = "C:\Users\kamm\Downloads\komenasne\kakolog"
+$log_dir = "..\komenasne\kakolog"
+
+# スクリーンショットフォルダ
+$screenshot_dir = ".\screenshot"
 
 # Thanks
 # http://kamifuji.dyndns.org/PS-Support/
@@ -188,7 +191,7 @@ $screenHeight = [System.Windows.Forms.Screen]::PrimaryScreen.WorkingArea.Height
 $form = New-Object System.Windows.Forms.Form 
 $form.Text = "こめなす"
 #$form.Size = New-Object System.Drawing.Size(220,130)
-$form.Size = New-Object System.Drawing.Size(230,190)
+$form.Size = New-Object System.Drawing.Size(220,180)
 $form.Top = $default_window_pos_top
 $form.Left = $default_window_pos_left
 $form.StartPosition = "Manual"
@@ -256,15 +259,15 @@ $LabelLog.Forecolor = "yellow"
 $LabelLog.TextAlign = "MiddleCenter"
 
 
-# ラベル PC TV Plus 再起動
-$LabelRecovery = New-Object System.Windows.Forms.Label
-$LabelRecovery.Location = "80,105"
-$LabelRecovery.Size = New-Object System.Drawing.Size(55,30)
-$LabelRecovery.Text = "PC TV"
-$LabelRecovery.BackColor = "black"
-$LabelRecovery.Forecolor = "yellow"
-$LabelRecovery.TextAlign = "MiddleCenter"
-
+# PC TV Plus 再起動
+$OKButton = New-Object System.Windows.Forms.Button
+$OKButton.Location = New-Object System.Drawing.Point(80,105)
+$OKButton.Size = New-Object System.Drawing.Size(55,30)
+$OKButton.Text = "PC TV"
+$OKButton.DialogResult = "OK"
+$OKButton.Flatstyle = "Popup"
+$OKButton.Backcolor = "black"
+$OKButton.forecolor = "yellow"
 
 # キャンセルボタンの設定
 $CancelButton = New-Object System.Windows.Forms.Button
@@ -275,6 +278,7 @@ $CancelButton.DialogResult = "Retry"
 $CancelButton.Flatstyle = "Popup"
 $CancelButton.backcolor = "black"
 $CancelButton.forecolor = "yellow"
+
 
 # ラベル
 $LabelPause = New-Object System.Windows.Forms.Label
@@ -311,7 +315,8 @@ $FuncScreenShot = {
     sleep -Milliseconds 100
     $bounds = [Drawing.Rectangle]::FromLTRB(0, 0, $screenWidth, $screenHeight)
     $file_name = (Get-Date).ToString("yyyyMMddHHmmss") + "screenshot.png"
-    screenshot $bounds $file_name
+    $save_path = $screenshot_dir + "\" + $file_name
+    screenshot $bounds $save_path
 }
 
 
@@ -340,8 +345,8 @@ Function file_open(){
 
 $FuncLogFileOpen = {
     #ファイル取得
-    $file = file_open
-    if ( $file -ne $none ) {
+    $script:file = file_open
+    if ( $script:file -ne $none ) {
         $LabelLog.Forecolor = "red"
     } else {
         $LabelLog.Forecolor = "yellow"
@@ -350,16 +355,16 @@ $FuncLogFileOpen = {
 
 $FuncSkipA = {
     # 次のチャプターとAのコメントまで移動する
-    . Send-Keys "a{LEFT}{LEFT}{LEFT}" $comment_viewer_app
     . Send-Keys "^({RIGHT})" Vnt
+    . Send-Keys "a" $comment_viewer_app
     sleep -Milliseconds 4000
     [System.Windows.Forms.Cursor]::Position = New-Object System.Drawing.Point($VntX, $VntY)
 }
 
 $FuncSkipB = {
     # 次のチャプターとBのコメントまで移動する
-    . Send-Keys "b{LEFT}{LEFT}{LEFT}" $comment_viewer_app
     . Send-Keys "^({RIGHT})" Vnt
+    . Send-Keys "b" $comment_viewer_app
     sleep -Milliseconds  4000
     [System.Windows.Forms.Cursor]::Position = New-Object System.Drawing.Point( $VntX, $VntY )
 }
@@ -398,10 +403,18 @@ $LabelSkipA.Add_Click($FuncSkipA)
 $LabelSkipB.Add_Click($FuncSkipB)
 $LabelSkipPrev.Add_Click($FuncSkipPrev)
 $LabelSkipBack.Add_Click($FuncSkipBack)
-
-$LabelRecovery.Add_Click($FuncPCTVReStart)
 $LabelPause.Add_Click($FuncPause)
-$LabelLog.Add_Click($FuncLogFileOpen)
+
+
+$FuncFileOpenClick= {
+    if ($_.Button -eq "Left" ) {
+        . $FuncLogFileOpen
+    } else {
+        $script:file = $null
+        $LabelLog.Forecolor = "yellow"
+    }
+}
+$LabelLog.Add_MouseDown($FuncFileOpenClick)
 
 
 
@@ -415,7 +428,6 @@ $form.CancelButton = $CancelButton
 # ボタン等をフォームに追加
 $form.Controls.Add($OKButton)
 $form.Controls.Add($CancelButton)
-$form.Controls.Add($OK2Button)
 $form.Controls.Add($YesButton)
 $form.Controls.Add($AbortButton)
 $form.Controls.Add($NoneButton)
@@ -426,34 +438,27 @@ $VerbosePreference = 'Continue'
 $result = $form.ShowDialog()
 
 
-
 # 結果による処理分岐
 while ($result -ne "Cancel") {
     if ($result -eq "OK") {
-        # 次のチャプターとAのコメントまで移動する
-        . Send-Keys "a{LEFT}{LEFT}{LEFT}" $comment_viewer_app
-        . Send-Keys "^({RIGHT})" Vnt
-        sleep -Milliseconds 4000
-        [System.Windows.Forms.Cursor]::Position = New-Object System.Drawing.Point($VntX, $VntY)
-    }
-
-    if ($result -eq "Ignore") {
-        # 次のチャプターとBのコメントまで移動する
-        . Send-Keys "b{LEFT}{LEFT}{LEFT}" $comment_viewer_app
-        . Send-Keys "^({RIGHT})" Vnt
-        sleep -Milliseconds  4000
-        [System.Windows.Forms.Cursor]::Position = New-Object System.Drawing.Point( $VntX, $VntY )
+        . $FuncPCTVReStart
     }
 
     if ($result -eq "Yes") {
+
         if ($YesButton.Text -eq "OPEN") {
-            if ( getProcess("Vnt") -ne $null ) {
+            $ps = getProcess("Vnt")
+            if ( $ps -ne $null ) {
 
                 # PC TV Plusウィンドウ位置調整
                 if ( $ps -ne $null ) {
-                    $y = 174 # PC TV Plusの縦位置
-                    $width = 1280 # PC TV Plusの幅
+                    $y = 260 # PC TV Plusの縦位置
+                    $width = 960 # PC TV Plusの幅
+
+#                    $y = 174 # PC TV Plusの縦位置
+#                    $width = 1280 # PC TV Plusの幅
                     $shift = 0 # 右にずらす
+
                     $x = (( 1920 - $width ) / 2) + $shift
                     $height = ($width / 16 * 9)
                     [Win32Api]::MoveWindow($ps.MainWindowHandle, $x, $y, $width, $height, $true) | Out-Null
