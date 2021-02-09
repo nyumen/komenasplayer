@@ -6,16 +6,16 @@ $comment_viewer_size_max = $True
 
 # ウィンドウのデフォルト位置 1920x1080の場合 上から800,左から15（好みに合わせて変更）
 $default_window_pos_top = 760
-$default_window_pos_left = 30
+$default_window_pos_left = 20
 
 # PC TV Plusを早見再生する ( $True or $False )
 $enable_speed_up = $True
 
 # 30秒送りでcommenomiが進みすぎるときはこの値を増やす（1000で1秒）
-$prev_skip_wait = 2000
+$prev_skip_wait = 1000
 
 # 30秒戻しでcommenomiが進みすぎるときはこの値を増やす（1000で1秒）
-$back_skip_wait = 3000
+$back_skip_wait = 1000
 
 # フォームの透明度 ( 0～1 )
 $form_opacity = 0.6
@@ -356,17 +356,19 @@ $FuncLogFileOpen = {
 $FuncSkipA = {
     # 次のチャプターとAのコメントまで移動する
     . Send-Keys "^({RIGHT})" Vnt
-    . Send-Keys "a" $comment_viewer_app
     sleep -Milliseconds 4000
-    [System.Windows.Forms.Cursor]::Position = New-Object System.Drawing.Point($VntX, $VntY)
+    . Send-Keys "a" $comment_viewer_app
+    . Send-Keys "" Vnt
+#    [System.Windows.Forms.Cursor]::Position = New-Object System.Drawing.Point($VntX, $VntY)
 }
 
 $FuncSkipB = {
     # 次のチャプターとBのコメントまで移動する
     . Send-Keys "^({RIGHT})" Vnt
-    . Send-Keys "b" $comment_viewer_app
     sleep -Milliseconds  4000
-    [System.Windows.Forms.Cursor]::Position = New-Object System.Drawing.Point( $VntX, $VntY )
+    . Send-Keys "b" $comment_viewer_app
+    . Send-Keys "" Vnt
+#    [System.Windows.Forms.Cursor]::Position = New-Object System.Drawing.Point( $VntX, $VntY )
 }
 
 $FuncSkipPrev = {
@@ -452,16 +454,21 @@ while ($result -ne "Cancel") {
 
                 # PC TV Plusウィンドウ位置調整
                 if ( $ps -ne $null ) {
-                    $y = 260 # PC TV Plusの縦位置
-                    $width = 960 # PC TV Plusの幅
 
-#                    $y = 174 # PC TV Plusの縦位置
+#                    $top = 174 # PC TV Plusの縦位置
 #                    $width = 1280 # PC TV Plusの幅
-                    $shift = 0 # 右にずらす
 
-                    $x = (( 1920 - $width ) / 2) + $shift
+#                    $y = 260 # PC TV Plusの縦位置
+#                    $width = 960 # PC TV Plusの幅
+#                    $shift = 0 # 右にずらす
+
+                    $top = 140 # PC TV Plusの縦位置
+                    $width = 1440 # PC TV Plusの幅
+                    $shift = 25 # 右にずらす
+
+                    $left = (( 1920 - $width ) / 2) + $shift
                     $height = ($width / 16 * 9)
-                    [Win32Api]::MoveWindow($ps.MainWindowHandle, $x, $y, $width, $height, $true) | Out-Null
+                    [Win32Api]::MoveWindow($ps.MainWindowHandle, $left, $top, $width, $height, $true) | Out-Null
                 }
 
                 if ( $file -ne $null ) {
