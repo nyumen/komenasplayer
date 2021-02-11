@@ -6,16 +6,16 @@ $comment_viewer_size_max = $True
 
 # ウィンドウのデフォルト位置 1920x1080の場合 上から800,左から15（好みに合わせて変更）
 $default_window_pos_top = 760
-$default_window_pos_left = 20
+$default_window_pos_left = 15
 
 # PC TV Plusを早見再生する ( $True or $False )
 $enable_speed_up = $True
 
 # 30秒送りでcommenomiが進みすぎるときはこの値を増やす（1000で1秒）
-$prev_skip_wait = 1000
+$prev_skip_wait = 0
 
 # 30秒戻しでcommenomiが進みすぎるときはこの値を増やす（1000で1秒）
-$back_skip_wait = 1000
+$back_skip_wait = 2000
 
 # フォームの透明度 ( 0～1 )
 $form_opacity = 0.6
@@ -151,7 +151,7 @@ function Send-Keys($KeyStroke, $ProcessName) {
         $y = $VntY
     }
     if ($ProcessName -eq $comment_viewer_app ) {
-        $x = $form.Left + 240
+        $x = $form.Left + 200
         $y = $form.Top - 1
     }
 
@@ -191,7 +191,7 @@ $screenHeight = [System.Windows.Forms.Screen]::PrimaryScreen.WorkingArea.Height
 $form = New-Object System.Windows.Forms.Form 
 $form.Text = "こめなす"
 #$form.Size = New-Object System.Drawing.Size(220,130)
-$form.Size = New-Object System.Drawing.Size(220,180)
+$form.Size = New-Object System.Drawing.Size(230,190)
 $form.Top = $default_window_pos_top
 $form.Left = $default_window_pos_left
 $form.StartPosition = "Manual"
@@ -249,14 +249,14 @@ $YesButton.backcolor = "black"
 $YesButton.forecolor = "yellow"
 
 
-# ラベル ログセット
-$LabelLog = New-Object System.Windows.Forms.Label
-$LabelLog.Location = "15,105"
-$LabelLog.Size = New-Object System.Drawing.Size(55,30)
-$LabelLog.Text = "SET LOG"
-$LabelLog.BackColor = "black"
-$LabelLog.Forecolor = "yellow"
-$LabelLog.TextAlign = "MiddleCenter"
+# ラベル はじめから
+$LabelSkipZero = New-Object System.Windows.Forms.Label
+$LabelSkipZero.Location = "15,105"
+$LabelSkipZero.Size = New-Object System.Drawing.Size(55,30)
+$LabelSkipZero.Text = "SKIP 0"
+$LabelSkipZero.BackColor = "black"
+$LabelSkipZero.Forecolor = "yellow"
+$LabelSkipZero.TextAlign = "MiddleCenter"
 
 
 # PC TV Plus 再起動
@@ -295,7 +295,7 @@ $form.Controls.Add($LabelSkipPrev)
 $form.Controls.Add($LabelSkipBack)
 $form.Controls.Add($LabelRecovery)
 $form.Controls.Add($LabelPause)
-$form.Controls.Add($LabelLog)
+$form.Controls.Add($LabelSkipZero)
 
 $file = $null
 
@@ -306,7 +306,7 @@ $FuncPCTVReStart = {
         $ret = $ps.CloseMainWindow()
     }
     sleep -Milliseconds 5000
-    $obj = Start-Process -FilePath "Vnt.exe" -WorkingDirectory "C:\Program Files (x86)\Sony\PC TV Plus" -PassThru
+    $proc = Start-Process -FilePath "Vnt.exe" -WorkingDirectory "C:\Program Files (x86)\Sony\PC TV Plus" -PassThru
 }
 
 $FuncScreenShot = {
@@ -347,9 +347,9 @@ $FuncLogFileOpen = {
     #ファイル取得
     $script:file = file_open
     if ( $script:file -ne $none ) {
-        $LabelLog.Forecolor = "red"
+        $YesButton.Forecolor = "red"
     } else {
-        $LabelLog.Forecolor = "yellow"
+        $YesButton.Forecolor = "yellow"
     }
 }
 
@@ -358,7 +358,7 @@ $FuncSkipA = {
     . Send-Keys "^({RIGHT})" Vnt
     sleep -Milliseconds 4000
     . Send-Keys "a" $comment_viewer_app
-    . Send-Keys "" Vnt
+#    . Send-Keys "" Vnt
 #    [System.Windows.Forms.Cursor]::Position = New-Object System.Drawing.Point($VntX, $VntY)
 }
 
@@ -367,7 +367,7 @@ $FuncSkipB = {
     . Send-Keys "^({RIGHT})" Vnt
     sleep -Milliseconds  4000
     . Send-Keys "b" $comment_viewer_app
-    . Send-Keys "" Vnt
+#    . Send-Keys "" Vnt
 #    [System.Windows.Forms.Cursor]::Position = New-Object System.Drawing.Point( $VntX, $VntY )
 }
 
@@ -401,23 +401,66 @@ $FuncPause = {
     . Send-Keys " " Vnt
 }
 
-$LabelSkipA.Add_Click($FuncSkipA)
-$LabelSkipB.Add_Click($FuncSkipB)
-$LabelSkipPrev.Add_Click($FuncSkipPrev)
-$LabelSkipBack.Add_Click($FuncSkipBack)
-$LabelPause.Add_Click($FuncPause)
+$FuncChangeVntSize = {
+    param($Size)
+    $ps = getProcess("Vnt")
+    # PC TV Plusウィンドウ位置調整
+    if ( $ps -ne $null ) {
+        switch ( $Size ) {
+            "S" {
+                $top = 260 # PC TV Plusの縦位置
+                $width = 960 # PC TV Plusの幅
+                $shift = 0 # 右にずらす
+            }
+            "M" {
+                $top = 174 # PC TV Plusの縦位置
+                $width = 1280 # PC TV Plusの幅
+                $shift = 0 # 右にずらす
+            }
+            "L" {
+                $top = 145 # PC TV Plusの縦位置
+                $width = 1440 # PC TV Plusの幅
+                $shift = 15 # 右にずらす
+            }
+        }
+        $left = (( 1920 - $width ) / 2) + $shift
+        $height = ($width / 16 * 9)
+        [Win32Api]::MoveWindow($ps.MainWindowHandle, $left, $top, $width, $height, $true) | Out-Null
+    }
+}
 
-
-$FuncFileOpenClick= {
+$FuncFileOpenClick = {
     if ($_.Button -eq "Left" ) {
         . $FuncLogFileOpen
     } else {
         $script:file = $null
         $LabelLog.Forecolor = "yellow"
     }
+    $script:komenasne_option = $null
 }
-$LabelLog.Add_MouseDown($FuncFileOpenClick)
 
+$FuncSkipZero = {
+    . Send-Keys "0" $comment_viewer_app
+    . Send-Keys "%$("{LEFT}" * 50)" Vnt
+}
+
+
+$FuncChangeOpenClose = {
+    if ( $YesButton.Text -eq "OPEN" ) {
+        $YesButton.Text = "CLOSE"
+        $form.Opacity = $form_opacity
+    } else {
+        $YesButton.Text = "OPEN"
+        $form.Opacity = 1
+    }
+}
+
+$LabelSkipA.Add_Click($FuncSkipA)
+$LabelSkipB.Add_Click($FuncSkipB)
+$LabelSkipPrev.Add_Click($FuncSkipPrev)
+$LabelSkipBack.Add_Click($FuncSkipBack)
+$LabelPause.Add_Click($FuncPause)
+$LabelSkipZero.Add_Click($FuncSkipZero)
 
 
 # 最前面に表示：する
@@ -433,6 +476,167 @@ $form.Controls.Add($CancelButton)
 $form.Controls.Add($YesButton)
 $form.Controls.Add($AbortButton)
 $form.Controls.Add($NoneButton)
+
+
+# インスタンス化
+$Context = New-Object System.Windows.Forms.ContextMenuStrip
+
+# 項目を追加
+[void]$Context.Items.Add("動画サイズ S")
+[void]$Context.Items.Add("動画サイズ M")
+[void]$Context.Items.Add("動画サイズ L")
+[void]$Context.Items.Add("SET LOG")
+[void]$Context.Items.Add("チャンネルと日時を指定")
+[void]$Context.Items.Add("OPEN CLOSE 切り替え")
+
+
+$Click = {
+    [String]$A = $_.ClickedItem
+    $Context.Close()
+    IF ( $A -eq "動画サイズ S") {
+        . $FuncChangeVntSize "S"
+    }elseif( $A -eq "動画サイズ M" ) {
+        . $FuncChangeVntSize "M"
+    }elseif( $A -eq "動画サイズ L" ) {
+        . $FuncChangeVntSize "L"
+    }elseif( $A -eq "SET LOG" ) {
+        . $FuncLogFileOpen
+    }elseif( $A -eq "チャンネルと日時を指定" ) {
+        . $SubForm
+    }elseif( $A -eq "OPEN CLOSE 切り替え" ) {
+        . $FuncChangeOpenClose
+    }
+}
+$Context.Add_ItemClicked($Click)
+
+
+$SubForm = {
+    # フォームの作成
+    $private:form = New-Object System.Windows.Forms.Form 
+    $private:form.Text = "入力"
+    $private:form.Size = New-Object System.Drawing.Size(400,250) 
+
+    # OKボタンの設定
+    $private:OKButton = New-Object System.Windows.Forms.Button
+    $private:OKButton.Location = New-Object System.Drawing.Point(90,170)
+    $private:OKButton.Size = New-Object System.Drawing.Size(75,30)
+    $private:OKButton.Text = "OK"
+    $private:OKButton.DialogResult = "OK"	
+    # 列挙子名：None, OK, Cancel, Abort, Retry, Ignore, Yes, No
+
+    # キャンセルボタンの設定
+    $private:CancelButton = New-Object System.Windows.Forms.Button
+    $private:CancelButton.Location = New-Object System.Drawing.Point(190,170)
+    $private:CancelButton.Size = New-Object System.Drawing.Size(75,30)
+    $private:CancelButton.Text = "Cancel"
+    $private:CancelButton.DialogResult = "Cancel"
+    # 列挙子名：None, OK, Cancel, Abort, Retry, Ignore, Yes, No
+
+    # ラベルの設定
+    $private:label1 = New-Object System.Windows.Forms.Label
+    $private:label1.Location = New-Object System.Drawing.Point(10,10) 
+    $private:label1.Size = New-Object System.Drawing.Size(350,20) 
+    $private:label1.Text = "チャンネルを選択"
+    
+    # コンボボックスを作成
+    $comboBox = New-Object System.Windows.Forms.Combobox
+    $comboBox.Location = New-Object System.Drawing.Point(10,30)
+    $comboBox.size = New-Object System.Drawing.Size(100,30)
+    $comboBox.DropDownStyle = "DropDown"
+    $comboBox.FlatStyle = "standard"
+    $comboBox.font = $Font
+    $comboBox.BackColor = "#005050"
+    $comboBox.ForeColor = "white"
+
+    # ラベルの設定
+    $private:label2 = New-Object System.Windows.Forms.Label
+    $private:label2.Location = New-Object System.Drawing.Point(10,60) 
+    $private:label2.Size = New-Object System.Drawing.Size(125,20) 
+    $private:label2.Text = "YYYY-MM-DD HH:mm"
+
+    # 入力ボックスの設定
+    $private:textBoxDate = New-Object System.Windows.Forms.TextBox 
+    $private:textBoxDate.Location = New-Object System.Drawing.Point(10,80) 
+    $private:textBoxDate.Size = New-Object System.Drawing.Size(125,50) 
+
+    # ラベルの設定
+    $private:label3 = New-Object System.Windows.Forms.Label
+    $private:label3.Location = New-Object System.Drawing.Point(150,60) 
+    $private:label3.Size = New-Object System.Drawing.Size(250,20) 
+    $private:label3.Text = "分数(半角数字)"
+
+    # 入力ボックスの設定
+    $private:textBoxMinutes = New-Object System.Windows.Forms.TextBox 
+    $private:textBoxMinutes.Location = New-Object System.Drawing.Point(150,80) 
+    $private:textBoxMinutes.Size = New-Object System.Drawing.Size(50,50) 
+
+    # ラベルの設定
+    $private:label4 = New-Object System.Windows.Forms.Label
+    $private:label4.Location = New-Object System.Drawing.Point(10,110) 
+    $private:label4.Size = New-Object System.Drawing.Size(250,20) 
+    $private:label4.Text = "番組名(任意)"
+
+    # 入力ボックスの設定
+    $private:textBoxTitle = New-Object System.Windows.Forms.TextBox 
+    $private:textBoxTitle.Location = New-Object System.Drawing.Point(10,130) 
+    $private:textBoxTitle.Size = New-Object System.Drawing.Size(350,50) 
+
+    # コンボボックスに項目を追加
+    $ch_list = 'NHK', 'Eテレ', '日テレ', 'テレ朝', 'TBS', 'テレ東', 'フジ', 'MX', 'BS11'
+    foreach ( $ch in $ch_list ) {
+        [void] $comboBox.Items.Add( $ch )
+    }
+    
+    # フォームにコンボボックスを追加
+    # キーとボタンの関係
+    $private:form.AcceptButton = $private:OKButton
+    $private:form.CancelButton = $private:CancelButton
+
+    # ボタン等をフォームに追加
+    $private:form.Controls.Add($private:OKButton)
+    $private:form.Controls.Add($private:CancelButton)
+    $private:form.Controls.Add($private:label1) 
+    $private:form.Controls.Add($private:label2) 
+    $private:form.Controls.Add($private:label3) 
+    $private:form.Controls.Add($private:label4) 
+    $private:form.Controls.Add($textBoxDate)
+    $private:form.Controls.Add($textBoxMinutes)
+    $private:form.Controls.Add($textBoxTitle)
+    $form.Controls.Add($comboBox)
+
+#    $comboBox.Add_SelectedIndexChanged({
+#        $textBox.text = """" + @($comboBox.text) + """ "
+#    })
+
+    #フォームを常に手前に表示
+    $private:form.Topmost = $True
+
+    #フォームをアクティブにし、テキストボックスにフォーカスを設定
+    $form.Add_Shown({$comboBox.Select()})
+ 
+    # フォームを表示させ、その結果を受け取る
+    $private:result = $private:form.ShowDialog()
+    
+    # 結果による処理分岐
+    if ($private:result -eq "OK") {
+	    $script:komenasne_option = """" + $comboBox.text + """ """ + $textBoxDate.text + """ " + $textBoxMinutes.Text + " """ + $textBoxTitle.Text + """"
+        $file = $null
+        $YesButton.forecolor = "limegreen"
+    }
+}
+
+
+# クリックイベントの内容
+$RIght = {
+    IF ( $_.Button -eq "Right" )
+    {
+        $Context.Show()
+    }
+}
+$form.Add_MouseDown($RIght)
+
+# フォームにコンテキストメニューを追加
+$form.ContextMenuStrip = $Context
 
 $VerbosePreference = 'Continue'
 
@@ -452,58 +656,64 @@ while ($result -ne "Cancel") {
             $ps = getProcess("Vnt")
             if ( $ps -ne $null ) {
 
-                # PC TV Plusウィンドウ位置調整
-                if ( $ps -ne $null ) {
-
-#                    $top = 174 # PC TV Plusの縦位置
-#                    $width = 1280 # PC TV Plusの幅
-
-#                    $y = 260 # PC TV Plusの縦位置
-#                    $width = 960 # PC TV Plusの幅
-#                    $shift = 0 # 右にずらす
-
-                    $top = 140 # PC TV Plusの縦位置
-                    $width = 1440 # PC TV Plusの幅
-                    $shift = 25 # 右にずらす
-
-                    $left = (( 1920 - $width ) / 2) + $shift
-                    $height = ($width / 16 * 9)
-                    [Win32Api]::MoveWindow($ps.MainWindowHandle, $left, $top, $width, $height, $true) | Out-Null
-                }
-
+                $error_flg = $false
                 if ( $file -ne $null ) {
                     $file_name = """" + $file + """"
-                    $obj = Start-Process -FilePath ($comment_viewer_app + ".exe") -WorkingDirectory ("..\" + $comment_viewer_app + "\") -ArgumentList $file_name -PassThru
+                    $comment_viewer_exe_path = "..\" + $comment_viewer_app + "\" + $comment_viewer_app + ".exe"
+                    $proc = Start-Process -FilePath $comment_viewer_exe_path -ArgumentList $file_name -PassThru
                     $file = $null
                     sleep -Milliseconds  2000
                 } else {
                     # komenasneを開く
-        #            $obj = Start-Process -FilePath "komenasne.exe" -WorkingDirectory ".\" -PassThru
-                    $obj = Start-Process -FilePath "komenasne.exe" -WorkingDirectory "..\komenasne\" -PassThru
-                }
-
-                Wait-Process -InputObject $obj
-                sleep -Milliseconds  4000
-                # PC TV Plusを倍速再生にする
-                if ( $enable_speed_up -eq $True ) {
-                    . Send-Keys '+(^(G))' Vnt
-                }
-                [System.Windows.Forms.Cursor]::Position = New-Object System.Drawing.Point( $VntX, $VntY )
-                $count = 0
-                while ($count -lt 50) {
-                    sleep -Milliseconds 100
-                    $ps = getProcess( $comment_viewer_app )
-                    if ( $ps -ne $null ) {
-                        $YesButton.Text = "CLOSE"
-                        $count = 51
+        #            $proc = Start-Process -FilePath "komenasne.exe" -WorkingDirectory ".\" -PassThru
+                    $komenasne_exe_path = "komenasne.exe"
+                    $komenasne_working_directory = "..\komenasne"
+                    if ( $komenasne_option -eq $null ) {
+                        $proc = Start-Process -FilePath $komenasne_exe_path -WorkingDirectory $komenasne_working_directory -PassThru
+                    } else {
+                        $proc = Start-Process -FilePath $komenasne_exe_path -WorkingDirectory $komenasne_working_directory -ArgumentList $komenasne_option -PassThru
+                        $komenasne_option = $null
                     }
-                    $count++
+
+                    Wait-Process -InputObject $proc
+                    switch ( $proc.ExitCode ) {
+                        -1 {
+                            $f = New-Object System.Windows.Forms.form
+                            $f.TopMost = $true
+                            $ret = [System.Windows.Forms.MessageBox]::Show($f, "komenasneが見つかりません.", "Error")
+                            $error_flg = $true
+                        }
+                        1 {
+                            $f = New-Object System.Windows.Forms.form
+                            $f.TopMost = $true
+                            $ret = [System.Windows.Forms.MessageBox]::Show($f, "komenasneの実行中にエラーが発生しました.", "Error")
+                            $error_flg = $true
+                        }
+                    }
                 }
-                # ウィンドウ最大化
-                if ( ( $comment_viewer_size_max -eq $True ) -and ( $ps -ne $null ) ) {
-                    [Win32.NativeMethods]::ShowWindowAsync($ps.MainWindowHandle, 3) | Out-Null
+                if ( $error_flg -eq $false ) {
+                    sleep -Milliseconds  4000
+                    # PC TV Plusを倍速再生にする
+                    if ( $enable_speed_up -eq $True ) {
+                        . Send-Keys '+(^(G))' Vnt
+                    }
+                    [System.Windows.Forms.Cursor]::Position = New-Object System.Drawing.Point( $VntX, $VntY )
+                    $count = 0
+                    while ($count -lt 50) {
+                        sleep -Milliseconds 100
+                        $ps = getProcess( $comment_viewer_app )
+                        if ( $ps -ne $null ) {
+                            $YesButton.Text = "CLOSE"
+                            break
+                        }
+                        $count++
+                    }
+                    # ウィンドウ最大化
+                    if ( ( $comment_viewer_size_max -eq $True ) -and ( $ps -ne $null ) ) {
+                        [Win32.NativeMethods]::ShowWindowAsync($ps.MainWindowHandle, 3) | Out-Null
+                    }
                 }
-                $LabelLog.Forecolor = "yellow"
+                $YesButton.Forecolor = "yellow"
                 $form.Opacity = $form_opacity
             }
         } else {
