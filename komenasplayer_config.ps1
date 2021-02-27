@@ -16,9 +16,10 @@ $screenshot_dir = ".\screenshot"
 # コメントプレイヤー最大化 ( $True or $False )
 $comment_viewer_size_max = $True
 
-# ウィンドウのデフォルト位置 1920x1080の場合
-$default_window_pos_top = 760
+# デフォルト位置 1920x1080の場合
+$default_window_pos_top = 850
 $default_window_pos_left = 15
+
 
 # PC TV Plusの大きさ指定 1920x1080の場合 ( top:上からの位置 width:幅 shift:横方向補正 )
 $size_S_top = 261
@@ -35,10 +36,14 @@ $size_L_shift = 0
 $enable_speed_up = $True
 
 # 30秒送りでcommenomiが進みすぎるときはこの値を増やす（1000で1秒）
-$prev_skip_wait = 500
+$prev_skip_wait = 1000
 
 # 30秒戻しでcommenomiが進みすぎるときはこの値を増やす（1000で1秒）
 $back_skip_wait = 2000
 
-# フォームの透明度 ( 0～1 )
-$form_opacity = 0.6
+# フォームの透明度 ( 0.05～1 )
+#$form_opacity = 0.5
+$form_opacity = 0.05
+
+# フォームクリックでフォームを隠す ( $True or $False )
+$form_auto_hide = $True

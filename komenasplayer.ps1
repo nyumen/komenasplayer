@@ -16,11 +16,43 @@ Add-Type -AssemblyName System.Windows.Forms
 Add-Type -AssemblyName System.Drawing
 
 $signature=@' 
-      [DllImport("user32.dll",CharSet=CharSet.Auto, CallingConvention=CallingConvention.StdCall)]
-      public static extern void mouse_event(long dwFlags, long dx, long dy, long cButtons, long dwExtraInfo);
+    [DllImport("user32.dll",CharSet=CharSet.Auto, CallingConvention=CallingConvention.StdCall)]
+    public static extern void mouse_event(long dwFlags, long dx, long dy, long cButtons, long dwExtraInfo);
 '@
 
 $SendMouseEvent = Add-Type -memberDefinition $signature -name "Win32MouseEventNew" -namespace Win32Functions -passThru
+
+$SWP_NOSIZE = 0x0001     # ウインドウの現在のサイズを保持する
+$SWP_NOMOVE = 0x0002     # ウインドウの現在位置を保持する
+$SWP_NOZORDER = 0x0004   # ウインドウリスト内での現在位置を保持する
+$SWP_SHOWWINDOW = 0x0040 #ウインドウを表示する
+
+$HWND_TOPMOST = -1       # ウインドウをウインドウリストの一番上に配置する
+$HWND_NOTOPMOST = -2     # すべての最前面ウィンドウの後ろに挿入
+
+$signature=@' 
+    [DllImport("user32.dll")]
+    public static extern bool ShowWindowAsync(
+        IntPtr hWnd, 
+        int nCmdShow
+    );
+
+    [DllImport("user32.dll")]
+    public static extern bool SetForegroundWindow( IntPtr hWnd );
+
+    [DllImport("user32.dll")]
+    public static extern bool SetWindowPos(
+        IntPtr hWnd,            // ウィンドウのハンドル
+        IntPtr hWndInsertAfter, // 配置順序のハンドル
+        int    X,               // 横方向の位置
+        int    Y,               // 縦方向の位置
+        int    cx,              // 幅
+        int    cy,              // 高さ
+        UInt32 uFlags           // ウィンドウ位置のオプション
+    );
+'@
+
+$Win32 = Add-Type -memberDefinition $signature -name "Win32ApiFunctions" -namespace Win32ApiFunctions -passThru
 
 # C#のソースコードを変数に保存
 # http://blog.livedoor.jp/morituri/archives/53399411.html
@@ -84,11 +116,6 @@ namespace PowerShell
 '@
 }
 
-# https://owlcamp.jp/powershell%E3%81%A7%E3%82%B9%E3%82%AF%E3%83%AA%E3%83%BC%E3%83%B3%E3%82%AD%E3%83%A3%E3%83%97%E3%83%81%E3%83%A3%E3%82%92%E8%87%AA%E5%8B%95%E3%81%A7%E5%8F%96%E5%BE%97%E3%81%97%E3%81%A6%E3%83%95%E3%82%A1/
-$dll_info = '[DllImport("user32.dll")] public static extern bool ShowWindowAsync(IntPtr hWnd, int nCmdShow);'
-    Add-Type -MemberDefinition $dll_info -Name NativeMethods -Namespace Win32
- 
-
 # スクリーンショット
 # https://www.it-swarm-ja.tech/ja/powershell/windows-powershell%E3%81%A7%E7%94%BB%E9%9D%A2%E3%82%AD%E3%83%A3%E3%83%97%E3%83%81%E3%83%A3%E3%82%92%E5%AE%9F%E8%A1%8C%E3%81%99%E3%82%8B%E3%81%AB%E3%81%AF%E3%81%A9%E3%81%86%E3%81%99%E3%82%8C%E3%81%B0%E3%82%88%E3%81%84%E3%81%A7%E3%81%99%E3%81%8B%EF%BC%9F/969655941/
 function screenshot([Drawing.Rectangle]$bounds, $path) {
@@ -107,13 +134,13 @@ function getDefaultPos() {
     sleep -Milliseconds  100
 
     # $rectにPC TV Plusの4隅のスクリーン座標が格納される
-    $ps = getProcess ( "Vnt" )
-    $rect = [Win32Api.Helper]::GetForegroundWindowRect( $ps.MainWindowHandle )
+    $ps_vnt = getProcess ( "Vnt" )
+    $rect = [Win32Api.Helper]::GetForegroundWindowRect( $ps_vnt.MainWindowHandle )
     $VntX = $rect.Left + 20
     $VntY = $rect.Bottom - 180
 }
 
-function Send-Keys($KeyStroke, $ProcessName) {
+function Send-Keys( $KeyStroke, $ProcessName ) {
     $ps = getProcess($ProcessName)
     # IMEがオンだったらオフにする
     if ( $ps.Name -eq $ProcessName ) {
@@ -122,7 +149,7 @@ function Send-Keys($KeyStroke, $ProcessName) {
             sleep -Milliseconds  100
         }
     }
-
+    <#
     # PC TV Plusのウィンドウサイズを取得する
     . getDefaultPos 
 
@@ -134,14 +161,17 @@ function Send-Keys($KeyStroke, $ProcessName) {
         $x = $form.Left + 180
         $y = $form.Top - 20
     }
-
-    [System.Windows.Forms.Cursor]::Position = New-Object System.Drawing.Point($x, $y)
+    #>
+#    [System.Windows.Forms.Cursor]::Position = New-Object System.Drawing.Point($x, $y)
 
 
     # 左クリック
-    $SendMouseEvent::mouse_event(0x00000002, 0, 0, 0, 0);
-    $SendMouseEvent::mouse_event(0x00000004, 0, 0, 0, 0);
+#    $SendMouseEvent::mouse_event(0x00000002, 0, 0, 0, 0);
+#    $SendMouseEvent::mouse_event(0x00000004, 0, 0, 0, 0);
 
+
+#Write-Host $ps.Name
+    [Void]$win32::SetForegroundWindow( $ps.MainWindowHandle )
     sleep -Milliseconds  100
 
     [System.Windows.Forms.SendKeys]::SendWait($KeyStroke)
@@ -150,19 +180,6 @@ function Send-Keys($KeyStroke, $ProcessName) {
 function getProcess($ProcessName) {
     return Get-Process | Where-Object {$_.Name -eq $ProcessName}
 }
-
-# C#
-# https://maywork.net/computer/powershell-googlechrome-windows-size-reset/
-Add-Type @"
-    using System;
-    using System.Runtime.InteropServices;
-
-    public class Win32Api {
-        [DllImport("user32.dll")]
-        [return: MarshalAs(UnmanagedType.Bool)]
-        public static extern bool MoveWindow(IntPtr hWnd, int X, int Y, int nWidth, int nHeight, bool bRepaint);
-    }
-"@
 
 $screenWidth = [System.Windows.Forms.Screen]::PrimaryScreen.WorkingArea.Width
 $screenHeight = [System.Windows.Forms.Screen]::PrimaryScreen.WorkingArea.Height
@@ -195,7 +212,7 @@ $form.Opacity = 1
 
 # ラベル SKIP A
 $LabelSkipA = New-Object System.Windows.Forms.Label
-$LabelSkipA.Location = "15,15"
+$LabelSkipA.Location = "15,18"
 $LabelSkipA.Size = New-Object System.Drawing.Size(55,30)
 $LabelSkipA.Text = "SKIP A"
 $LabelSkipA.BackColor = "black"
@@ -204,7 +221,7 @@ $LabelSkipA.TextAlign = "MiddleCenter"
 
 # ラベル SKIP B
 $LabelSkipB = New-Object System.Windows.Forms.Label
-$LabelSkipB.Location = "80,15"
+$LabelSkipB.Location = "80,18"
 $LabelSkipB.Size = New-Object System.Drawing.Size(55,30)
 $LabelSkipB.Text = "SKIP B"
 $LabelSkipB.BackColor = "black"
@@ -213,7 +230,7 @@ $LabelSkipB.TextAlign = "MiddleCenter"
 
 # ラベル 30秒スキップ
 $LabelSkipPrev = New-Object System.Windows.Forms.Label
-$LabelSkipPrev.Location = "145,15"
+$LabelSkipPrev.Location = "145,18"
 $LabelSkipPrev.Size = New-Object System.Drawing.Size(55,30)
 $LabelSkipPrev.Text = "+30"
 $LabelSkipPrev.BackColor = "black"
@@ -222,17 +239,16 @@ $LabelSkipPrev.TextAlign = "MiddleCenter"
 
 # ラベル 30秒バック
 $LabelSkipBack = New-Object System.Windows.Forms.Label
-$LabelSkipBack.Location = "145,60"
+$LabelSkipBack.Location = "145,63"
 $LabelSkipBack.Size = New-Object System.Drawing.Size(55,30)
 $LabelSkipBack.Text = "-30"
 $LabelSkipBack.BackColor = "black"
 $LabelSkipBack.Forecolor = "yellow"
 $LabelSkipBack.TextAlign = "MiddleCenter"
 
-
 # Yesボタンの設定
 $YesButton = New-Object System.Windows.Forms.Button
-$YesButton.Location = New-Object System.Drawing.Point(15,60)
+$YesButton.Location = New-Object System.Drawing.Point(15,63)
 $YesButton.Size = New-Object System.Drawing.Size(55,30)
 $YesButton.Text = "OPEN"
 $YesButton.DialogResult = "Yes"
@@ -240,10 +256,18 @@ $YesButton.Flatstyle = "Popup"
 $YesButton.backcolor = "black"
 $YesButton.forecolor = "yellow"
 
+# ラベル
+$LabelPause = New-Object System.Windows.Forms.Label
+$LabelPause.Location = "80,63"
+$LabelPause.Size = New-Object System.Drawing.Size(55,30)
+$LabelPause.Text = "PAUSE" 
+$LabelPause.BackColor = "black"
+$LabelPause.Forecolor = "yellow"
+$LabelPause.TextAlign = "MiddleCenter"
 
 # ラベル はじめから
 $LabelSkipZero = New-Object System.Windows.Forms.Label
-$LabelSkipZero.Location = "15,105"
+$LabelSkipZero.Location = "15,108"
 $LabelSkipZero.Size = New-Object System.Drawing.Size(55,30)
 $LabelSkipZero.Text = "SKIP 0"
 $LabelSkipZero.BackColor = "black"
@@ -253,7 +277,7 @@ $LabelSkipZero.TextAlign = "MiddleCenter"
 
 # PC TV Plus 再起動
 $OKButton = New-Object System.Windows.Forms.Button
-$OKButton.Location = New-Object System.Drawing.Point(80,105)
+$OKButton.Location = New-Object System.Drawing.Point(80,108)
 $OKButton.Size = New-Object System.Drawing.Size(55,30)
 $OKButton.Text = "PC TV"
 $OKButton.DialogResult = "OK"
@@ -263,7 +287,7 @@ $OKButton.forecolor = "yellow"
 
 # キャンセルボタンの設定
 $CancelButton = New-Object System.Windows.Forms.Button
-$CancelButton.Location = New-Object System.Drawing.Point(145,105)
+$CancelButton.Location = New-Object System.Drawing.Point(145,108)
 $CancelButton.Size = New-Object System.Drawing.Size(55,30)
 $CancelButton.Text = "SS"
 $CancelButton.DialogResult = "Retry"
@@ -271,15 +295,6 @@ $CancelButton.Flatstyle = "Popup"
 $CancelButton.backcolor = "black"
 $CancelButton.forecolor = "yellow"
 
-
-# ラベル
-$LabelPause = New-Object System.Windows.Forms.Label
-$LabelPause.Location = "80,60"
-$LabelPause.Size = New-Object System.Drawing.Size(55,30)
-$LabelPause.Text = "PAUSE" 
-$LabelPause.BackColor = "black"
-$LabelPause.Forecolor = "yellow"
-$LabelPause.TextAlign = "MiddleCenter"
 
 $form.Controls.Add($LabelSkipA)
 $form.Controls.Add($LabelSkipB)
@@ -293,9 +308,9 @@ $file = $null
 
 $FuncPCTVReStart = {
     sleep -Milliseconds 100
-    $ps = getProcess( "Vnt" )
-    if ( $ps -ne $null ) {
-        $ret = $ps.CloseMainWindow()
+    $ps_vnt = getProcess( "Vnt" )
+    if ( $ps_vnt -ne $null ) {
+        $ret = $ps_vnt.CloseMainWindow()
     }
     sleep -Milliseconds 5000
     $vnt_file_name_pos = $pc_tv_plus_path.LastIndexOf( "\" )
@@ -306,8 +321,14 @@ $FuncPCTVReStart = {
 
 $FuncScreenShot = {
     # スクリーンショット
-    . Send-Keys "" $comment_viewer_app
-    sleep -Milliseconds 100
+    if (  $comment_viewer_size_max -eq $True ) {
+        $ps_viewer = getProcess( $comment_viewer_app )
+        # ウィンドウ最大化
+        if ( $ps_viewer.Name -eq $comment_viewer_app ) {
+            $win32::ShowWindowAsync($ps_viewer.MainWindowHandle, 3) | Out-Null
+        }
+    }
+    sleep -Milliseconds 200
     $bounds = [Drawing.Rectangle]::FromLTRB(0, 0, $screenWidth, $screenHeight)
     $file_name = (Get-Date).ToString("yyyyMMddHHmmss") + "screenshot.png"
     $save_path = $screenshot_dir + "\" + $file_name
@@ -351,19 +372,19 @@ $FuncLogFileOpen = {
 $FuncSkipA = {
     # 次のチャプターとAのコメントまで移動する
     . Send-Keys "^({RIGHT})" Vnt
-    sleep -Milliseconds 4000
+    sleep -Milliseconds 3000
     . Send-Keys "a" $comment_viewer_app
 #    . Send-Keys "" Vnt
-    [System.Windows.Forms.Cursor]::Position = New-Object System.Drawing.Point($VntX, $VntY)
+    #[System.Windows.Forms.Cursor]::Position = New-Object System.Drawing.Point($VntX, $VntY)
 }
 
 $FuncSkipB = {
     # 次のチャプターとBのコメントまで移動する
     . Send-Keys "^({RIGHT})" Vnt
-    sleep -Milliseconds  4000
+    sleep -Milliseconds  3000
     . Send-Keys "b" $comment_viewer_app
 #    . Send-Keys "" Vnt
-    [System.Windows.Forms.Cursor]::Position = New-Object System.Drawing.Point( $VntX, $VntY )
+    #[System.Windows.Forms.Cursor]::Position = New-Object System.Drawing.Point( $VntX, $VntY )
 }
 
 $FuncSkipPrev = {
@@ -373,9 +394,9 @@ $FuncSkipPrev = {
     # commenomiが進みすぎるときはこの値を増やす
     sleep -Milliseconds $prev_skip_wait
     . Send-Keys " " $comment_viewer_app
-    sleep -Milliseconds 100
-    . Send-Keys "" Vnt
-    [System.Windows.Forms.Cursor]::Position = New-Object System.Drawing.Point($VntX, $VntY)
+    #sleep -Milliseconds 100
+    #. Send-Keys "" Vnt
+   # [System.Windows.Forms.Cursor]::Position = New-Object System.Drawing.Point($VntX, $VntY)
 }
 
 $FuncSkipBack = {
@@ -385,22 +406,22 @@ $FuncSkipBack = {
     # commenomiが進みすぎるときはこの値を増やす
     sleep -Milliseconds $back_skip_wait
     . Send-Keys " " $comment_viewer_app
-    sleep -Milliseconds 100
-    . Send-Keys "" Vnt
-    [System.Windows.Forms.Cursor]::Position = New-Object System.Drawing.Point($VntX, $VntY)
+    #sleep -Milliseconds 100
+    #. Send-Keys "" Vnt
+    #[System.Windows.Forms.Cursor]::Position = New-Object System.Drawing.Point($VntX, $VntY)
 }
 
 $FuncPause = {
     # 一時停止
-    . Send-Keys " " $comment_viewer_app
     . Send-Keys " " Vnt
+    . Send-Keys " " $comment_viewer_app
 }
 
 $FuncChangeVntSize = {
     param($Size)
-    $ps = getProcess("Vnt")
+    $ps_vnt = getProcess("Vnt")
     # PC TV Plusウィンドウ位置調整
-    if ( $ps -ne $null ) {
+    if ( $ps_vnt -ne $null ) {
         switch ( $Size ) {
             "S" {
                 $top, $width, $shift = $size_S_top, $size_S_width, $size_S_shift
@@ -427,7 +448,7 @@ $FuncChangeVntSize = {
         }
         $left = $left + $shift
         sleep -Milliseconds 100
-        [Win32Api]::MoveWindow($ps.MainWindowHandle, $left, $real_top, $real_width, $height, $true) | Out-Null
+        $win32::SetWindowPos( $ps_vnt.MainWindowHandle, $HWND_TOPMOST, $left, $real_top, $real_width, $height, $SWP_SHOWWINDOW)
     }
 }
 
@@ -442,18 +463,17 @@ $FuncFileOpenClick = {
 }
 
 $FuncSkipZero = {
+    . Send-Keys "%$("{LEFT}" * 30)" Vnt
+    sleep -Milliseconds 1000
     . Send-Keys "0" $comment_viewer_app
-    . Send-Keys "%$("{LEFT}" * 50)" Vnt
 }
 
 
 $FuncChangeOpenClose = {
     if ( $YesButton.Text -eq "OPEN" ) {
         $YesButton.Text = "CLOSE"
-        $form.Opacity = $form_opacity
     } else {
         $YesButton.Text = "OPEN"
-        $form.Opacity = 1
     }
 }
 
@@ -465,7 +485,7 @@ $FuncOpenKomenasne = {
     if ( $komenasne_option -eq $null ) {
         $proc = Start-Process -FilePath $komenasne_exe_name -WorkingDirectory $komenasne_working_directory -PassThru
     } else {
-    Write-Host $komenasne_option
+    #Write-Host $komenasne_option
         $proc = Start-Process -FilePath $komenasne_exe_name -WorkingDirectory $komenasne_working_directory -ArgumentList $komenasne_option -PassThru
     }
 }
@@ -477,6 +497,7 @@ $LabelSkipPrev.Add_Click($FuncSkipPrev)
 $LabelSkipBack.Add_Click($FuncSkipBack)
 $LabelPause.Add_Click($FuncPause)
 $LabelSkipZero.Add_Click($FuncSkipZero)
+
 
 
 # 最前面に表示：する
@@ -530,7 +551,7 @@ $FuncTimeTable = {
     param( $url )
     try
     {
-        $response = Invoke-WebRequest $url -UserAgent "komenasne"
+        $response = Invoke-WebRequest $url -UserAgent "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/88.0.4324.182 Safari/537.36"
     }
     catch [System.Net.WebException]
     {
@@ -809,15 +830,36 @@ $SubForm = {
     }
 }
 
-
-# クリックイベントの内容
-$RIght = {
-    IF ( $_.Button -eq "Right" )
-    {
-        $Context.Show()
+$FuncHideForm = {
+    if ( $form_auto_hide -eq $True ) {
+        $form.Size = New-Object System.Drawing.Size(136, 55)
+        $form.Opacity = $form_opacity
     }
 }
-$form.Add_MouseDown($RIght)
+
+$FuncShowForm = {
+    $form.Size = New-Object System.Drawing.Size(230,190)
+    $form.Opacity = 1
+}
+
+
+
+# クリックイベントの内容
+$MouseClick = {
+    if ( $_.Button -eq "Right" ) {
+        $Context.Show()
+    } elseif ( $_.Button -eq "Left" ) {
+        . $FuncHideForm
+    }
+}
+$form.Add_MouseDown($MouseClick)
+$MouseHover = {
+#    if ( $form.Size.Height -eq 55 ) {
+        . $FuncShowForm
+#    }
+}
+$form.Add_MouseHover($MouseHover)
+
 
 # フォームにコンテキストメニューを追加
 $form.ContextMenuStrip = $Context
@@ -837,8 +879,8 @@ while ($result -ne "Cancel") {
     if ($result -eq "Yes") {
 
         if ($YesButton.Text -eq "OPEN") {
-            $ps = getProcess("Vnt")
-            if ( $ps -ne $null ) {
+            $ps_vnt = getProcess("Vnt")
+            if ( $ps_vnt -ne $null ) {
 
                 $error_flg = $false
                 if ( $file -ne $null ) {
@@ -853,6 +895,7 @@ while ($result -ne "Cancel") {
                         # 一度だけリトライする
                         sleep -Milliseconds  3000
                         . $FuncOpenKomenasne
+                        Wait-Process -InputObject $proc
                     }
                     if ( $proc.ExitCode -ne 0 ) {
 #                        $f = New-Object System.Windows.Forms.form
@@ -860,7 +903,6 @@ while ($result -ne "Cancel") {
 #                        $f.Left = 0
 #                        $ret = [System.Windows.Forms.MessageBox]::Show($f, "komenasneが見つかりません.", "Error")
                         $error_flg = $true
-                        $form.Opacity = 1
                     }
                 }
                 if ( $error_flg -eq $false ) {
@@ -869,23 +911,28 @@ while ($result -ne "Cancel") {
                     if ( $enable_speed_up -eq $True ) {
                         . Send-Keys '+(^(G))' Vnt
                     }
-                    [System.Windows.Forms.Cursor]::Position = New-Object System.Drawing.Point( $VntX, $VntY )
+#                    [System.Windows.Forms.Cursor]::Position = New-Object System.Drawing.Point( $VntX, $VntY )
                     $count = 0
                     while ($count -lt 50) {
                         sleep -Milliseconds 100
-                        $ps = getProcess( $comment_viewer_app )
-                        if ( $ps -ne $null ) {
+                        $ps_viewer = getProcess( $comment_viewer_app )
+                        if ( $ps_viewer -ne $null ) {
                             $YesButton.Text = "CLOSE"
                             break
                         }
                         $count++
                     }
-                    # ウィンドウ最大化
-                    if ( ( $comment_viewer_size_max -eq $True ) -and ( $ps -ne $null ) ) {
-                        [Win32.NativeMethods]::ShowWindowAsync($ps.MainWindowHandle, 3) | Out-Null
+                    if ( $ps_viewer -ne $null ) {
+                        if (  $comment_viewer_size_max -eq $True ) {
+                            # ウィンドウ最大化
+                            $win32::ShowWindowAsync($ps_viewer.MainWindowHandle, 3) | Out-Null
+                            $form.Size = New-Object System.Drawing.Size(136, 55)
+                        } else {
+                            . Send-Keys '{F5}' $comment_viewer_app
+                        }
                     }
                     # フォームを半透明に
-                    $form.Opacity = $form_opacity
+                    . $FuncHideForm
                 }
                 $komenasne_option = $null
                 $YesButton.Forecolor = "yellow"
@@ -893,9 +940,9 @@ while ($result -ne "Cancel") {
         } else {
             # commenomiを閉じる
             sleep -Milliseconds 100
-            $ps = getProcess( $comment_viewer_app )
-            if ( $ps -ne $null ) {
-                $ret = $ps.CloseMainWindow()
+            $ps_viewer = getProcess( $comment_viewer_app )
+            if ( $ps_viewer.Name -eq $comment_viewer_app ) {
+                $ret = $ps_viewer.CloseMainWindow()
             }
             sleep -Milliseconds 1000
             . Send-Keys "{BACKSPACE}" Vnt
