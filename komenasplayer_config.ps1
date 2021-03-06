@@ -36,7 +36,7 @@ $size_L_shift = 0
 $enable_speed_up = $True
 
 # 30秒送りでcommenomiが進みすぎるときはこの値を増やす（1000で1秒）
-$prev_skip_wait = 1000
+$prev_skip_wait = 500
 
 # 30秒戻しでcommenomiが進みすぎるときはこの値を増やす（1000で1秒）
 $back_skip_wait = 2000

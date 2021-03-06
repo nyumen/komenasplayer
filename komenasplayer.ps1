@@ -15,13 +15,6 @@ Set-Location -Path $current_path
 Add-Type -AssemblyName System.Windows.Forms
 Add-Type -AssemblyName System.Drawing
 
-$signature=@' 
-    [DllImport("user32.dll",CharSet=CharSet.Auto, CallingConvention=CallingConvention.StdCall)]
-    public static extern void mouse_event(long dwFlags, long dx, long dy, long cButtons, long dwExtraInfo);
-'@
-
-$SendMouseEvent = Add-Type -memberDefinition $signature -name "Win32MouseEventNew" -namespace Win32Functions -passThru
-
 $SWP_NOSIZE = 0x0001     # ウインドウの現在のサイズを保持する
 $SWP_NOMOVE = 0x0002     # ウインドウの現在位置を保持する
 $SWP_NOZORDER = 0x0004   # ウインドウリスト内での現在位置を保持する
@@ -124,7 +117,7 @@ function screenshot([Drawing.Rectangle]$bounds, $path) {
 
    $graphics.CopyFromScreen($bounds.Location, [Drawing.Point]::Empty, $bounds.size)
 
-   $bmp.Save($path)
+   $bmp.Save($path, [System.Drawing.Imaging.ImageFormat]::Jpeg)
 
    $graphics.Dispose()
    $bmp.Dispose()
@@ -141,7 +134,7 @@ function getDefaultPos() {
 }
 
 function Send-Keys( $KeyStroke, $ProcessName ) {
-    $ps = getProcess($ProcessName)
+    $ps = getProcess( $ProcessName )
     # IMEがオンだったらオフにする
     if ( $ps.Name -eq $ProcessName ) {
         if ([PowerShell.IME]::GetState( $ps.MainWindowHandle )) {
@@ -149,26 +142,6 @@ function Send-Keys( $KeyStroke, $ProcessName ) {
             sleep -Milliseconds  100
         }
     }
-    <#
-    # PC TV Plusのウィンドウサイズを取得する
-    . getDefaultPos 
-
-    if ($ProcessName -eq "Vnt") {
-        $x = $VntX
-        $y = $VntY
-    }
-    if ($ProcessName -eq $comment_viewer_app ) {
-        $x = $form.Left + 180
-        $y = $form.Top - 20
-    }
-    #>
-#    [System.Windows.Forms.Cursor]::Position = New-Object System.Drawing.Point($x, $y)
-
-
-    # 左クリック
-#    $SendMouseEvent::mouse_event(0x00000002, 0, 0, 0, 0);
-#    $SendMouseEvent::mouse_event(0x00000004, 0, 0, 0, 0);
-
 
 #Write-Host $ps.Name
     [Void]$win32::SetForegroundWindow( $ps.MainWindowHandle )
@@ -177,8 +150,14 @@ function Send-Keys( $KeyStroke, $ProcessName ) {
     [System.Windows.Forms.SendKeys]::SendWait($KeyStroke)
 }
 
-function getProcess($ProcessName) {
-    return Get-Process | Where-Object {$_.Name -eq $ProcessName}
+function getProcess( $ProcessName ) {
+    $ps = Get-Process | Where-Object {$_.Name -eq $ProcessName}
+    if ( $ProcessName -eq "Vnt" ) {
+        $script:ps_vnt = $ps
+    } else {
+        $script:ps_viewer = $ps
+    }
+    return $ps
 }
 
 $screenWidth = [System.Windows.Forms.Screen]::PrimaryScreen.WorkingArea.Width
@@ -328,9 +307,9 @@ $FuncScreenShot = {
             $win32::ShowWindowAsync($ps_viewer.MainWindowHandle, 3) | Out-Null
         }
     }
-    sleep -Milliseconds 200
+    sleep -Milliseconds 500
     $bounds = [Drawing.Rectangle]::FromLTRB(0, 0, $screenWidth, $screenHeight)
-    $file_name = (Get-Date).ToString("yyyyMMddHHmmss") + "screenshot.png"
+    $file_name = (Get-Date).ToString("yyyyMMddHHmmss") + "screenshot.jpg"
     $save_path = $screenshot_dir + "\" + $file_name
     screenshot $bounds $save_path
 }
@@ -372,49 +351,45 @@ $FuncLogFileOpen = {
 $FuncSkipA = {
     # 次のチャプターとAのコメントまで移動する
     . Send-Keys "^({RIGHT})" Vnt
-    sleep -Milliseconds 3000
+    sleep -Milliseconds 1000
     . Send-Keys "a" $comment_viewer_app
-#    . Send-Keys "" Vnt
-    #[System.Windows.Forms.Cursor]::Position = New-Object System.Drawing.Point($VntX, $VntY)
+    [Void]$win32::SetForegroundWindow( $script:ps_vnt.MainWindowHandle )
 }
 
 $FuncSkipB = {
     # 次のチャプターとBのコメントまで移動する
     . Send-Keys "^({RIGHT})" Vnt
-    sleep -Milliseconds  3000
+    sleep -Milliseconds  1000
     . Send-Keys "b" $comment_viewer_app
-#    . Send-Keys "" Vnt
-    #[System.Windows.Forms.Cursor]::Position = New-Object System.Drawing.Point( $VntX, $VntY )
+    [Void]$win32::SetForegroundWindow( $script:ps_vnt.MainWindowHandle )
 }
 
 $FuncSkipPrev = {
     # 30秒飛ばし
-    . Send-Keys "%({RIGHT})" Vnt
     . Send-Keys " 3" $comment_viewer_app
+    . Send-Keys "%({RIGHT})" Vnt
     # commenomiが進みすぎるときはこの値を増やす
     sleep -Milliseconds $prev_skip_wait
     . Send-Keys " " $comment_viewer_app
-    #sleep -Milliseconds 100
-    #. Send-Keys "" Vnt
-   # [System.Windows.Forms.Cursor]::Position = New-Object System.Drawing.Point($VntX, $VntY)
+    [Void]$win32::SetForegroundWindow( $script:ps_vnt.MainWindowHandle )
 }
 
 $FuncSkipBack = {
     # 30秒戻し
-    . Send-Keys "%({LEFT}{LEFT})" Vnt
     . Send-Keys " 2" $comment_viewer_app
+    . Send-Keys "%({LEFT}{LEFT})" Vnt
     # commenomiが進みすぎるときはこの値を増やす
     sleep -Milliseconds $back_skip_wait
     . Send-Keys " " $comment_viewer_app
-    #sleep -Milliseconds 100
-    #. Send-Keys "" Vnt
-    #[System.Windows.Forms.Cursor]::Position = New-Object System.Drawing.Point($VntX, $VntY)
+    [Void]$win32::SetForegroundWindow( $script:ps_vnt.MainWindowHandle )
 }
 
 $FuncPause = {
     # 一時停止
-    . Send-Keys " " Vnt
     . Send-Keys " " $comment_viewer_app
+    . Send-Keys " " Vnt
+#    sleep -Milliseconds 100
+#    [Void]$win32::SetForegroundWindow( $script:ps_vnt.MainWindowHandle )
 }
 
 $FuncChangeVntSize = {
@@ -466,6 +441,7 @@ $FuncSkipZero = {
     . Send-Keys "%$("{LEFT}" * 30)" Vnt
     sleep -Milliseconds 1000
     . Send-Keys "0" $comment_viewer_app
+    [Void]$win32::SetForegroundWindow( $script:ps_vnt.MainWindowHandle )
 }
 
 
@@ -549,71 +525,62 @@ $Context.Add_ItemClicked($Click)
 
 $FuncTimeTable = {
     param( $url )
-    try
-    {
-        $response = Invoke-WebRequest $url -UserAgent "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/88.0.4324.182 Safari/537.36"
-    }
-    catch [System.Net.WebException]
-    {
-        # HTTPステータスコード取得
-        $statusCode = $_.Exception.Response.StatusCode.value__
- 
-        # レスポンス文字列取得
-        $stream = $_.Exception.Response.GetResponseStream()
-        $reader = New-Object System.IO.StreamReader $stream
-        $reader.BaseStream.Position = 0
-        $reader.DiscardBufferedData()
-        $responseBody = $reader.ReadToEnd()
-    }
-    if ( $statusCode -eq 200 ) {
+    $response = Invoke-WebRequest $url -UserAgent "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/88.0.4324.182 Safari/537.36"
+    if ( $response.StatusCode -eq 200 ) {
         $resp = [System.Text.Encoding]::UTF8.GetString( [System.Text.Encoding]::GetEncoding("ISO-8859-1").GetBytes($response.Content) )
+#$resp = '<!DOCTYPE html><html lang="ja"><head><meta charset="utf-8"><meta name="description" content="日テレ ルパン三世　「偽りのファンタジスタ」#2の番組詳細 （2015/10/09 01:29 ～ 2015/10/09 01:59）"><meta name="robots" content="noarchive"><title>番組詳細 日テレ ルパン三世　「偽りのファンタジスタ」#2 （2015/10/09 01:29 ～ 2015/10/09 01:59）</title><link rel="stylesheet" href="https://timetable.yanbe.net/css/time_table.css?20210303014027"><script src="https://timetable.yanbe.net/js/ex2.js?20210303014027"></script><script src="https://timetable.yanbe.net/js/p_set.js?20210303014027"></script></head><body><div id="banner"><a href="https://timetable.yanbe.net/?p=13">テレビ番組表の記録</a></div><!-- google_ad_section_start --><div id="content"><h2 class="title">番組詳細</h2><div class="title_menu">表示切替：<a href="https://timetable.yanbe.net/html/13/2015/10/08_1.html?13">番組表に戻る</a></div><div class="title_under_ads"><script src="https://timetable.yanbe.net/js/google_ads1.js"></script><script src="https://pagead2.googlesyndication.com/pagead/show_ads.js"></script></div><div class="clear_both"></div><div class="main_body"><h3 class="pdv_title">番組名</h3><p class="pdv_text">ルパン三世　「偽りのファンタジスタ」#2</p><h3 class="pdv_title">放送</h3><p class="pdv_text">日テレ<br>2015/10/09 01:29 ～ 2015/10/09 01:59　（30分）</p><h3 class="pdv_title">番組内容</h3><p class="pdv_text">1985年に放送終了した「ルパン三世PARTIII」以来30年ぶりにテレビシリーズが復活!新たなルパン三世が青いジャケットに身を包みイタリアとサンマリノを駆け巡る!</p><h3 class="pdv_title">その他</h3><p class="pdv_text">アニメ／特撮 - 国内アニメ</p><hr><p class="pdv_text"><a href="https://livesubject.yanbe.net/?p=0&bn=&sy=2015&sm=10&sd=09&sh=01&ey=2015&em=10&ed=09&eh=01&rs=2&sj=&sn=2&st=1" target="_blank" rel="noopener">放送時間帯の実況板スレを検索（別サイト）</a><br>全国ネット番組の場合はレス記録から<br>放送内容や延長情報などの情報が得れる場合があります</p></div></div><!-- google_ad_section_end --><div id="links"><form action="https://timetable.yanbe.net/" method="get" name="input"><input type="hidden" name="d" value="20151008"><div class="sidetitle">メニュー</div><div class="side"><div class="side_menu_area">地域<br><select name="p" class="p_select" onchange="goreload(this.form);return false"><option value="1">北海道</option><option value="2">青森</option><option value="3">岩手</option><option value="4">宮城</option><option value="5">秋田</option><option value="6">山形</option><option value="7">福島</option><option value="8">茨城</option><option value="9">栃木</option><option value="10">群馬</option><option value="11">埼玉</option><option value="12">千葉</option><option value="13" selected="selected">東京</option><option value="14">神奈川</option><option value="15">新潟</option><option value="16">富山</option><option value="17">石川</option><option value="18">福井</option><option value="19">山梨</option><option value="20">長野</option><option value="21">岐阜</option><option value="22">静岡</option><option value="23">愛知</option><option value="24">三重</option><option value="25">滋賀</option><option value="26">京都</option><option value="27">大阪</option><option value="28">兵庫</option><option value="29">奈良</option><option value="30">和歌山</option><option value="31">鳥取</option><option value="32">島根</option><option value="33">岡山</option><option value="34">広島</option><option value="35">山口</option><option value="36">徳島</option><option value="37">香川</option><option value="38">愛媛</option><option value="39">高知</option><option value="40">福岡</option><option value="41">佐賀</option><option value="42">長崎</option><option value="43">熊本</option><option value="44">大分</option><option value="45">宮崎</option><option value="46">鹿児島</option><option value="47">沖縄</option></select></div><div class="side_menu_year">年<br><a href="https://timetable.yanbe.net/?d=2021&amp;p=13">2021年</a><br><a href="https://timetable.yanbe.net/?d=2020&amp;p=13">2020年</a><br><a href="https://timetable.yanbe.net/?d=2019&amp;p=13">2019年</a><br><a href="https://timetable.yanbe.net/?d=2018&amp;p=13">2018年</a><br><a href="https://timetable.yanbe.net/?d=2017&amp;p=13">2017年</a><br><a href="https://timetable.yanbe.net/?d=2016&amp;p=13">2016年</a><br><a href="https://timetable.yanbe.net/?d=2015&amp;p=13">2015年</a><br><a href="https://timetable.yanbe.net/?d=2014&amp;p=13">2014年</a><br><a href="https://timetable.yanbe.net/?d=2013&amp;p=13">2013年</a><br><a href="https://timetable.yanbe.net/?d=2012&amp;p=13">2012年</a><br><a href="https://timetable.yanbe.net/?d=2011&amp;p=13">2011年</a><br><a href="https://timetable.yanbe.net/?d=2010&amp;p=13">2010年</a><br><a href="https://timetable.yanbe.net/?d=2009&amp;p=13">2009年</a><br><a href="https://timetable.yanbe.net/?d=2008&amp;p=13">2008年</a><br><a href="https://timetable.yanbe.net/?d=2007&amp;p=13">2007年</a><br></div></div></form><script src="https://timetable.yanbe.net/amazon_top.cgi"></script></div><script src="https://timetable.yanbe.net/js/google_analytics1.js"></script></body></html>'
         $resp -match "<title>(.+?)</title>"
         $page_title = $Matches[1]
-        $page_title -match "番組詳細 (.+?)・(.+?) （(.+?) ～ (.+?)）"
-        $channel = $Matches[1]
-        $timetable_title = $Matches[2]
-        $start_date_time = [DateTime]$Matches[3]
-        $end_date_time = [DateTime]$Matches[4]
-        $timetable_total_minutes = ($end_date_time - $start_date_time).TotalMinutes
-        $timetable_start_date_time = $start_date_time.ToString("yyyy-MM-dd HH:mm")
-        if ( $channel.StartsWith( "ＮＨＫ総合" ) ) {
-            $timetable_channel_index = 0
-        } elseif ( $channel.StartsWith( "ＮＨＫＥテレ" ) ) {
-            $timetable_channel_index = 1
-        } elseif ( $channel.StartsWith( "日テレ" ) ) {
-            $timetable_channel_index = 2
-        } elseif ( $channel.StartsWith( "テレビ朝日" ) ) {
-            $timetable_channel_index = 3
-        } elseif ( $channel.StartsWith( "ＴＢＳ" ) ) {
-            $timetable_channel_index = 4
-        } elseif ( $channel.StartsWith( "テレビ東京" ) ) {
-            $timetable_channel_index = 5
-        } elseif ( $channel.StartsWith( "フジテレビ" ) ) {
-            $timetable_channel_index = 6
-        } elseif ( $channel.StartsWith( "ＴＯＫＹＯ　ＭＸ" ) ) {
-            $timetable_channel_index = 7
-        } elseif ( $channel.StartsWith( "ＮＨＫ　ＢＳ１" ) ) {
-            $timetable_channel_index = 8
-        } elseif ( $channel.StartsWith( "ＮＨＫ　ＢＳプレミアム" ) ) {
-            $timetable_channel_index = 9
-        } elseif ( $channel.StartsWith( "ＢＳ日テレ" ) ) {
-            $timetable_channel_index = 10
-        } elseif ( $channel.StartsWith( "ＢＳ朝日" ) ) {
-            $timetable_channel_index = 11
-        } elseif ( $channel.StartsWith( "ＢＳ－ＴＢＳ" ) ) {
-            $timetable_channel_index = 12
-        } elseif ( $channel.StartsWith( "ＢＳテレ東" ) ) {
-            $timetable_channel_index = 13
-        } elseif ( $channel.StartsWith( "ＢＳフジ" ) ) {
-            $timetable_channel_index = 14
-        } elseif ( $channel.StartsWith( "ＷＯＷＯＷプライム" ) ) {
-            $timetable_channel_index = 15
-        } elseif ( $channel.StartsWith( "BS11" ) ) {
-            $timetable_channel_index = 16
-        } elseif ( $channel.StartsWith( "BS12" ) ) {
-            $timetable_channel_index = 17
-        } elseif ( $channel.StartsWith( "アニメシアターＸ" ) ) {
-            $timetable_channel_index = 18
+        $ret = $page_title -match "番組詳細 (.+?)・(.+?) （(.+?) ～ (.+?)）"
+        if ( $ret -eq $False ) {
+            $ret = $page_title -match "番組詳細 (.+?) (.+?) （(.+?) ～ (.+?)）"
+        }
+        if ( $ret -eq $True ) {
+            $channel = $Matches[1]
+            $timetable_title = $Matches[2]
+            $start_date_time = [DateTime]$Matches[3]
+            $end_date_time = [DateTime]$Matches[4]
+            $timetable_total_minutes = ($end_date_time - $start_date_time).TotalMinutes
+            $timetable_start_date_time = $start_date_time.ToString("yyyy-MM-dd HH:mm")
+            if ( $channel.StartsWith( "ＮＨＫ総合" ) ) {
+                $timetable_channel_index = 0
+            } elseif ( $channel.StartsWith( "ＮＨＫＥテレ" ) ) {
+                $timetable_channel_index = 1
+            } elseif ( $channel.StartsWith( "日テレ" ) ) {
+                $timetable_channel_index = 2
+            } elseif ( $channel.StartsWith( "テレビ朝日" ) ) {
+                $timetable_channel_index = 3
+            } elseif ( $channel.StartsWith( "ＴＢＳ" ) ) {
+                $timetable_channel_index = 4
+            } elseif ( $channel.StartsWith( "テレビ東京" ) ) {
+                $timetable_channel_index = 5
+            } elseif ( $channel.StartsWith( "フジテレビ" ) ) {
+                $timetable_channel_index = 6
+            } elseif ( $channel.StartsWith( "ＴＯＫＹＯ　ＭＸ" ) ) {
+                $timetable_channel_index = 7
+            } elseif ( $channel.StartsWith( "ＮＨＫ　ＢＳ１" ) ) {
+                $timetable_channel_index = 8
+            } elseif ( $channel.StartsWith( "ＮＨＫ　ＢＳプレミアム" ) ) {
+                $timetable_channel_index = 9
+            } elseif ( $channel.StartsWith( "ＢＳ日テレ" ) ) {
+                $timetable_channel_index = 10
+            } elseif ( $channel.StartsWith( "ＢＳ朝日" ) ) {
+                $timetable_channel_index = 11
+            } elseif ( $channel.StartsWith( "ＢＳ－ＴＢＳ" ) ) {
+                $timetable_channel_index = 12
+            } elseif ( $channel.StartsWith( "ＢＳテレ東" ) ) {
+                $timetable_channel_index = 13
+            } elseif ( $channel.StartsWith( "ＢＳフジ" ) ) {
+                $timetable_channel_index = 14
+            } elseif ( $channel.StartsWith( "ＷＯＷＯＷプライム" ) ) {
+                $timetable_channel_index = 15
+            } elseif ( $channel.StartsWith( "BS11" ) ) {
+                $timetable_channel_index = 16
+            } elseif ( $channel.StartsWith( "BS12" ) ) {
+                $timetable_channel_index = 17
+            } elseif ( $channel.StartsWith( "アニメシアターＸ" ) ) {
+                $timetable_channel_index = 18
+            }
         }
     }
 }
@@ -651,12 +618,18 @@ $SubForm = {
     $labelReset.TextAlign = "MiddleCenter"
 
     # ラベルの設定
-    $labelUrl = New-Object System.Windows.Forms.Label
-    $labelUrl.Location = New-Object System.Drawing.Point(10,10) 
-    $labelUrl.Size = New-Object System.Drawing.Size(350,20) 
-    $labelUrl.Forecolor = "blue"
-    $labelUrl.Text = "（省略可能）番組詳細のURLを入力　クリックして番組表を開く"
+    $labelUrl1 = New-Object System.Windows.Forms.Label
+    $labelUrl1.Location = New-Object System.Drawing.Point(10,10) 
+    $labelUrl1.Size = New-Object System.Drawing.Size(190,20) 
+    $labelUrl1.Text = "（省略可能）番組詳細のURLを入力"
     
+    # ラベルの設定
+    $labelUrl = New-Object System.Windows.Forms.Label
+    $labelUrl.Location = New-Object System.Drawing.Point(200,10) 
+    $labelUrl.Size = New-Object System.Drawing.Size(200,20) 
+    $labelUrl.Forecolor = "blue"
+    $labelUrl.Text = "クリックして番組表を開く"
+
     # 入力ボックスの設定
     $textBoxTimeTable = New-Object System.Windows.Forms.TextBox 
     $textBoxTimeTable.Location = New-Object System.Drawing.Point(10,30) 
@@ -754,6 +727,7 @@ $SubForm = {
     $private:form.Controls.Add($private:OKButton)
     $private:form.Controls.Add($private:CancelButton)
     $private:form.Controls.Add($labelReset)
+    $private:form.Controls.Add($labelUrl1) 
     $private:form.Controls.Add($labelUrl) 
     $private:form.Controls.Add($textBoxTimeTable)
     $private:form.Controls.Add($labelGetUrl) 
@@ -768,7 +742,7 @@ $SubForm = {
 
     $labelUrl.Add_Click(
         {
-            start ‘https://docs.microsoft.com/ja-jp/powershell/'
+            start ‘https://timetable.yanbe.net/'
         }
     )
 
