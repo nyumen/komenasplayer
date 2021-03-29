@@ -2,7 +2,8 @@
 <img src="img/screenshot.jpg" alt="EX-ARM" width="60%" height="60%">  
 <span style="font-size: 80%; float: right;">＊画像は「PC TV Plus」と「commenomi」を組み合わせて再生させたイメージです</span>  
 
-
+### [ダウンロードはこちら](https://github.com/nyumen/komenasplayer/releases)
+  
 ## 概要
 komenasneと連携して、PC TV Plusとcommenomiを制御するツールです。  
 ※基本的に中でどう動いているのか何をやっているのかを理解をしていないと使うのは難しいです。  
