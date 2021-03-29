@@ -41,9 +41,15 @@ $prev_skip_wait = 500
 # 30秒戻しでcommenomiが進みすぎるときはこの値を増やす（1000で1秒）
 $back_skip_wait = 2000
 
+# AやBへのスキップでcommenomiが進みすぎるときはこの値を増やす（1000で1秒）
+$a_b_skip_wait = 3000
+
 # フォームの透明度 ( 0.05～1 )
 #$form_opacity = 0.5
 $form_opacity = 0.05
 
 # フォームクリックでフォームを隠す ( $True or $False )
 $form_auto_hide = $True
+
+# スクリーンショットの画質 ( 90～100 )
+$screenshot_quality = 92

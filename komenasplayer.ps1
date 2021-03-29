@@ -1,4 +1,4 @@
-﻿# こめなすプレーヤー
+﻿# コメナスPlayer
 # https://github.com/nyumen/komenasplayer
 
 $current_path = Split-Path $MyInvocation.MyCommand.Path
@@ -112,15 +112,16 @@ namespace PowerShell
 # スクリーンショット
 # https://www.it-swarm-ja.tech/ja/powershell/windows-powershell%E3%81%A7%E7%94%BB%E9%9D%A2%E3%82%AD%E3%83%A3%E3%83%97%E3%83%81%E3%83%A3%E3%82%92%E5%AE%9F%E8%A1%8C%E3%81%99%E3%82%8B%E3%81%AB%E3%81%AF%E3%81%A9%E3%81%86%E3%81%99%E3%82%8C%E3%81%B0%E3%82%88%E3%81%84%E3%81%A7%E3%81%99%E3%81%8B%EF%BC%9F/969655941/
 function screenshot([Drawing.Rectangle]$bounds, $path) {
-   $bmp = New-Object Drawing.Bitmap $bounds.width, $bounds.height
-   $graphics = [Drawing.Graphics]::FromImage($bmp)
-
-   $graphics.CopyFromScreen($bounds.Location, [Drawing.Point]::Empty, $bounds.size)
-
-   $bmp.Save($path, [System.Drawing.Imaging.ImageFormat]::Jpeg)
-
-   $graphics.Dispose()
-   $bmp.Dispose()
+    $myEncoder = [System.Drawing.Imaging.Encoder]::Quality
+    $encoderParams = New-Object System.Drawing.Imaging.EncoderParameters(1) 
+    $encoderParams.Param[0] = New-Object System.Drawing.Imaging.EncoderParameter($myEncoder, $screenshot_quality)
+    $myImageCodecInfo = [System.Drawing.Imaging.ImageCodecInfo]::GetImageEncoders()|where {$_.MimeType -eq 'image/jpeg'}
+    $bmp = New-Object Drawing.Bitmap $bounds.width, $bounds.height
+    $graphics = [Drawing.Graphics]::FromImage($bmp)
+    $graphics.CopyFromScreen($bounds.Location, [Drawing.Point]::Empty, $bounds.size)
+    $bmp.Save($path, $myImageCodecInfo, $encoderParam)
+    $graphics.Dispose()
+    $bmp.Dispose()
 }
 
 function getDefaultPos() {
@@ -171,7 +172,7 @@ $comment_viewer_app = $comment_viewer_exe_name.Substring(0, $comment_viewer_exe_
 
 # フォームの作成
 $form = New-Object System.Windows.Forms.Form 
-$form.Text = "こめなす"
+$form.Text = "コメナス"
 $form.Size = New-Object System.Drawing.Size(230,190)
 # 画面解像度に合わせて位置を調整する
 $real_window_pos_top = $default_window_pos_top / ( 1080 + 36 ) * ( $screenHeight + 36 )
@@ -308,6 +309,8 @@ $FuncScreenShot = {
         }
     }
     sleep -Milliseconds 500
+    $screenWidth = [System.Windows.Forms.Screen]::PrimaryScreen.WorkingArea.Width
+    $screenHeight = [System.Windows.Forms.Screen]::PrimaryScreen.WorkingArea.Height
     $bounds = [Drawing.Rectangle]::FromLTRB(0, 0, $screenWidth, $screenHeight)
     $file_name = (Get-Date).ToString("yyyyMMddHHmmss") + "screenshot.jpg"
     $save_path = $screenshot_dir + "\" + $file_name
@@ -350,17 +353,19 @@ $FuncLogFileOpen = {
 
 $FuncSkipA = {
     # 次のチャプターとAのコメントまで移動する
+    . Send-Keys " a" $comment_viewer_app
     . Send-Keys "^({RIGHT})" Vnt
-    sleep -Milliseconds 1000
-    . Send-Keys "a" $comment_viewer_app
+    sleep -Milliseconds $a_b_skip_wait
+    . Send-Keys " " $comment_viewer_app
     [Void]$win32::SetForegroundWindow( $script:ps_vnt.MainWindowHandle )
 }
 
 $FuncSkipB = {
     # 次のチャプターとBのコメントまで移動する
+    . Send-Keys " b" $comment_viewer_app
     . Send-Keys "^({RIGHT})" Vnt
-    sleep -Milliseconds  1000
-    . Send-Keys "b" $comment_viewer_app
+    sleep -Milliseconds $a_b_skip_wait
+    . Send-Keys " " $comment_viewer_app
     [Void]$win32::SetForegroundWindow( $script:ps_vnt.MainWindowHandle )
 }
 
@@ -395,6 +400,9 @@ $FuncPause = {
 $FuncChangeVntSize = {
     param($Size)
     $ps_vnt = getProcess("Vnt")
+    sleep -Milliseconds 100
+    $screenWidth = [System.Windows.Forms.Screen]::PrimaryScreen.WorkingArea.Width
+    $screenHeight = [System.Windows.Forms.Screen]::PrimaryScreen.WorkingArea.Height
     # PC TV Plusウィンドウ位置調整
     if ( $ps_vnt -ne $null ) {
         switch ( $Size ) {
@@ -406,6 +414,11 @@ $FuncChangeVntSize = {
             }
             "L" {
                 $top, $width, $shift = $size_L_top, $size_L_width, $size_L_shift
+            }
+            "FULL" {
+                sleep -Milliseconds 100
+                $win32::SetWindowPos( $ps_vnt.MainWindowHandle, $HWND_NOTOPMOST, 0, 0, $screenWidth, $screenHeight, $SWP_SHOWWINDOW)
+                return
             }
         }
         # 1920*1080の設定値から実際の解像度に合わせて再計算
@@ -422,7 +435,6 @@ $FuncChangeVntSize = {
             $left = $real_window_pos_left + 231
         }
         $left = $left + $shift
-        sleep -Milliseconds 100
         $win32::SetWindowPos( $ps_vnt.MainWindowHandle, $HWND_TOPMOST, $left, $real_top, $real_width, $height, $SWP_SHOWWINDOW)
     }
 }
@@ -498,6 +510,7 @@ $Context = New-Object System.Windows.Forms.ContextMenuStrip
 [void]$Context.Items.Add("動画サイズ S")
 [void]$Context.Items.Add("動画サイズ M")
 [void]$Context.Items.Add("動画サイズ L")
+[void]$Context.Items.Add("動画サイズ FULL")
 [void]$Context.Items.Add("過去ログファイルを開く")
 [void]$Context.Items.Add("チャンネルと日時を指定")
 [void]$Context.Items.Add(" ") # 一行開ける
@@ -513,6 +526,8 @@ $Click = {
         . $FuncChangeVntSize "M"
     }elseif( $A -eq "動画サイズ L" ) {
         . $FuncChangeVntSize "L"
+    }elseif( $A -eq "動画サイズ FULL" ) {
+        . $FuncChangeVntSize "FULL"
     }elseif( $A -eq "過去ログファイルを開く" ) {
         . $FuncLogFileOpen
     }elseif( $A -eq "チャンネルと日時を指定" ) {
@@ -854,72 +869,73 @@ while ($result -ne "Cancel") {
 
         if ($YesButton.Text -eq "OPEN") {
             $ps_vnt = getProcess("Vnt")
-            if ( $ps_vnt -ne $null ) {
-
-                $error_flg = $false
-                if ( $file -ne $null ) {
-                    $file_name = """" + $file + """"
-                    $proc = Start-Process -FilePath $comment_viewer_exe_name -WorkingDirectory $comment_viewer_install_path -ArgumentList $file_name -PassThru
-                    $file = $null
-                    sleep -Milliseconds  2000
-                } else {
+            $error_flg = $false
+            if ( $file -ne $null ) {
+                $file_name = """" + $file + """"
+                $proc = Start-Process -FilePath $comment_viewer_exe_name -WorkingDirectory $comment_viewer_install_path -ArgumentList $file_name -PassThru
+                $file = $null
+                sleep -Milliseconds  4000
+            } else {
+                . $FuncOpenKomenasne
+                Wait-Process -InputObject $proc
+                if ( $proc.ExitCode -ne 0 ) {
+                    # 一度だけリトライする
+                    sleep -Milliseconds  3000
                     . $FuncOpenKomenasne
                     Wait-Process -InputObject $proc
-                    if ( $proc.ExitCode -ne 0 ) {
-                        # 一度だけリトライする
-                        sleep -Milliseconds  3000
-                        . $FuncOpenKomenasne
-                        Wait-Process -InputObject $proc
-                    }
-                    if ( $proc.ExitCode -ne 0 ) {
+                }
+                if ( $proc.ExitCode -ne 0 ) {
 #                        $f = New-Object System.Windows.Forms.form
 #                        $f.TopMost = $true
 #                        $f.Left = 0
 #                        $ret = [System.Windows.Forms.MessageBox]::Show($f, "komenasneが見つかりません.", "Error")
-                        $error_flg = $true
-                    }
+                    $error_flg = $true
                 }
-                if ( $error_flg -eq $false ) {
+            }
+            if ( $error_flg -eq $false ) {
+                if ( $ps_vnt -ne $null ) {
                     sleep -Milliseconds  4000
                     # PC TV Plusを倍速再生にする
                     if ( $enable_speed_up -eq $True ) {
                         . Send-Keys '+(^(G))' Vnt
                     }
-#                    [System.Windows.Forms.Cursor]::Position = New-Object System.Drawing.Point( $VntX, $VntY )
-                    $count = 0
-                    while ($count -lt 50) {
-                        sleep -Milliseconds 100
-                        $ps_viewer = getProcess( $comment_viewer_app )
-                        if ( $ps_viewer -ne $null ) {
-                            $YesButton.Text = "CLOSE"
-                            break
-                        }
-                        $count++
-                    }
-                    if ( $ps_viewer -ne $null ) {
-                        if (  $comment_viewer_size_max -eq $True ) {
-                            # ウィンドウ最大化
-                            $win32::ShowWindowAsync($ps_viewer.MainWindowHandle, 3) | Out-Null
-                            $form.Size = New-Object System.Drawing.Size(136, 55)
-                        } else {
-                            . Send-Keys '{F5}' $comment_viewer_app
-                        }
-                    }
-                    # フォームを半透明に
-                    . $FuncHideForm
                 }
-                $komenasne_option = $null
-                $YesButton.Forecolor = "yellow"
+                $count = 0
+                while ($count -lt 50) {
+                    sleep -Milliseconds 100
+                    $ps_viewer = getProcess( $comment_viewer_app )
+                    if ( $ps_viewer -ne $null ) {
+                        $YesButton.Text = "CLOSE"
+                        break
+                    }
+                    $count++
+                }
+                if ( $ps_viewer -ne $null ) {
+                    if (  $comment_viewer_size_max -eq $True ) {
+                        # ウィンドウ最大化
+                        $win32::ShowWindowAsync($ps_viewer.MainWindowHandle, 3) | Out-Null
+                        $form.Size = New-Object System.Drawing.Size(136, 55)
+                    } else {
+                        . Send-Keys '{F5}' $comment_viewer_app
+                    }
+                }
+                # フォームを半透明に
+                . $FuncHideForm
             }
+            $komenasne_option = $null
+            $YesButton.Forecolor = "yellow"
         } else {
             # commenomiを閉じる
             sleep -Milliseconds 100
             $ps_viewer = getProcess( $comment_viewer_app )
-            if ( $ps_viewer.Name -eq $comment_viewer_app ) {
+            if ( $ps_viewer -ne $null  ) {
                 $ret = $ps_viewer.CloseMainWindow()
             }
-            sleep -Milliseconds 1000
-            . Send-Keys "{BACKSPACE}" Vnt
+            $ps_vnt = getProcess("Vnt")
+            if ( $ps_vnt -ne $null ) {
+                sleep -Milliseconds 1000
+                . Send-Keys "{BACKSPACE}" Vnt
+            }
             $YesButton.Text = "OPEN"
             $form.Opacity = 1
         }
