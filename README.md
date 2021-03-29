@@ -72,13 +72,13 @@ PC TV Plusで動画を再生したあとに、気持ちゆっくりめでコメ�
 - 「PC TV」PC TV Plusを起動します。すでに起動済みの場合は再起動します  
 - 「SS」スクリーンショットを取得します。画像はscreenshotフォルダに保存されます。  
   
-<img src="img/right_click.png">  
 「右クリック」以下のメニューが表示されます。  
+<img src="img/right_click.png">  
 - 「動画サイズ S」
 - 「動画サイズ M」
 - 「動画サイズ L」
 - 「動画サイズ FULL」（commenomiのコメント表示を半透明にして、最前列で再生にチェックをしてください）  
 - 「過去ログファイルを開く」kakologフォルダに保存された、すでに取得済みの過去ログファイルを開きます。  
-<img src="img/title_get.jpg">  
 - 「チャンネルと日時を指定」nasneを参照せず、チャンネルと日時を指定して実況コメントを取得します。ネット配信の番組などの視聴時に便利です。  
+<img src="img/title_get.jpg">  
 - 「OPEN CLOSE 切り替え」コメナスPlayerを終了してしまった場合などに、OPENをCLOSEに戻すときなどに使用します。  
