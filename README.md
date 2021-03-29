@@ -49,7 +49,7 @@ komenasplayer.batのショートカットをデスクトップ等、使いやす
 <img src="img/niconico_mode.jpg">  
 - 「このウィンドウを常に最前面に」のチェックを*付ける*  
 - 「透過方式」を「Windows Aero(推奨)」に設定  
-【重要】このモードで再生する場合commenomiがコメナスPlayerより上に表示されるため、commenomiをダブルクリックして一時的に表示を小さくしてください。
+*【重要】このモードで再生する場合commenomiがコメナスPlayerより上に表示されるため、commenomiをダブルクリックして一時的に表示を小さくしてください。*
   
 # 使い方
 komenasplayer.batを実行すると起動します。  
